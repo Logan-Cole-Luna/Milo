@@ -1,0 +1,359 @@
+{
+  "model": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "model_architecture": {
+    "conv1.weight": [
+      64,
+      3,
+      3,
+      3
+    ],
+    "bn1.weight": [
+      64
+    ],
+    "bn1.bias": [
+      64
+    ],
+    "layer1.0.conv1.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.0.bn1.weight": [
+      64
+    ],
+    "layer1.0.bn1.bias": [
+      64
+    ],
+    "layer1.0.conv2.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.0.bn2.weight": [
+      64
+    ],
+    "layer1.0.bn2.bias": [
+      64
+    ],
+    "layer1.1.conv1.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.1.bn1.weight": [
+      64
+    ],
+    "layer1.1.bn1.bias": [
+      64
+    ],
+    "layer1.1.conv2.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.1.bn2.weight": [
+      64
+    ],
+    "layer1.1.bn2.bias": [
+      64
+    ],
+    "layer2.0.conv1.weight": [
+      128,
+      64,
+      3,
+      3
+    ],
+    "layer2.0.bn1.weight": [
+      128
+    ],
+    "layer2.0.bn1.bias": [
+      128
+    ],
+    "layer2.0.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.0.bn2.weight": [
+      128
+    ],
+    "layer2.0.bn2.bias": [
+      128
+    ],
+    "layer2.0.shortcut.0.weight": [
+      128,
+      64,
+      1,
+      1
+    ],
+    "layer2.0.shortcut.1.weight": [
+      128
+    ],
+    "layer2.0.shortcut.1.bias": [
+      128
+    ],
+    "layer2.1.conv1.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.1.bn1.weight": [
+      128
+    ],
+    "layer2.1.bn1.bias": [
+      128
+    ],
+    "layer2.1.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.1.bn2.weight": [
+      128
+    ],
+    "layer2.1.bn2.bias": [
+      128
+    ],
+    "layer3.0.conv1.weight": [
+      256,
+      128,
+      3,
+      3
+    ],
+    "layer3.0.bn1.weight": [
+      256
+    ],
+    "layer3.0.bn1.bias": [
+      256
+    ],
+    "layer3.0.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.0.bn2.weight": [
+      256
+    ],
+    "layer3.0.bn2.bias": [
+      256
+    ],
+    "layer3.0.shortcut.0.weight": [
+      256,
+      128,
+      1,
+      1
+    ],
+    "layer3.0.shortcut.1.weight": [
+      256
+    ],
+    "layer3.0.shortcut.1.bias": [
+      256
+    ],
+    "layer3.1.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.1.bn1.weight": [
+      256
+    ],
+    "layer3.1.bn1.bias": [
+      256
+    ],
+    "layer3.1.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.1.bn2.weight": [
+      256
+    ],
+    "layer3.1.bn2.bias": [
+      256
+    ],
+    "layer4.0.conv1.weight": [
+      512,
+      256,
+      3,
+      3
+    ],
+    "layer4.0.bn1.weight": [
+      512
+    ],
+    "layer4.0.bn1.bias": [
+      512
+    ],
+    "layer4.0.conv2.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.0.bn2.weight": [
+      512
+    ],
+    "layer4.0.bn2.bias": [
+      512
+    ],
+    "layer4.0.shortcut.0.weight": [
+      512,
+      256,
+      1,
+      1
+    ],
+    "layer4.0.shortcut.1.weight": [
+      512
+    ],
+    "layer4.0.shortcut.1.bias": [
+      512
+    ],
+    "layer4.1.conv1.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.1.bn1.weight": [
+      512
+    ],
+    "layer4.1.bn1.bias": [
+      512
+    ],
+    "layer4.1.conv2.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.1.bn2.weight": [
+      512
+    ],
+    "layer4.1.bn2.bias": [
+      512
+    ],
+    "linear.weight": [
+      100,
+      512
+    ],
+    "linear.bias": [
+      100
+    ],
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "batch_size": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "dataset": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "criterion": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "device": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "validation_split_ratio": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "test_split_ratio": {
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "optimizer_params": {
+    "MILO": {
+      "normalize": true,
+      "layer_wise": false,
+      "scale_aware": true,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": false,
+      "foreach": true,
+      "lr": 0.005
+    },
+    "MILO_LW": {
+      "normalize": true,
+      "layer_wise": true,
+      "scale_aware": true,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "lr": 0.005
+    },
+    "SGD": {
+      "momentum": 0.7934733244263732,
+      "nesterov": true,
+      "weight_decay": 0.00261537343333295,
+      "lr": 0.016132142705007842
+    },
+    "ADAMW": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.0005981898437781064,
+      "lr": 0.007342088949363189
+    },
+    "ADAGRAD": {
+      "lr_decay": 0.011408429774526819,
+      "weight_decay": 0.003819719064834646,
+      "eps": 3.8311481724371695e-10,
+      "lr": 0.007809622309952696
+    },
+    "NOVOGRAD": {
+      "betas": [
+        0.95,
+        0.99
+      ],
+      "weight_decay": 0.0006555151297952681,
+      "grad_averaging": true,
+      "lr": 0.010797196053270336
+    },
+    "experiment_title": "RESNET18 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  }
+}

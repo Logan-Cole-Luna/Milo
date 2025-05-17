@@ -1,0 +1,11 @@
+experiment_title,epochs,num_runs,optimizer,fc1.weight,fc1.bias,fc2.weight,fc2.bias,scheduler,MILO_normalize,MILO_layer_wise,MILO_scale_aware,MILO_scale_factor,MILO_nesterov,MILO_adaptive,MILO_momentum,MILO_profile_time,MILO_max_group_size,MILO_use_cached_mapping,MILO_foreach,MILO_lr,MILO_LW_normalize,MILO_LW_layer_wise,MILO_LW_scale_aware,MILO_LW_scale_factor,MILO_LW_nesterov,MILO_LW_adaptive,MILO_LW_momentum,MILO_LW_profile_time,MILO_LW_max_group_size,MILO_LW_use_cached_mapping,MILO_LW_foreach,MILO_LW_lr,SGD_momentum,SGD_nesterov,SGD_weight_decay,SGD_lr,ADAMW_betas,ADAMW_eps,ADAMW_weight_decay,ADAMW_lr,ADAGRAD_lr_decay,ADAGRAD_weight_decay,ADAGRAD_eps,ADAGRAD_lr,NOVOGRAD_betas,NOVOGRAD_weight_decay,NOVOGRAD_grad_averaging,NOVOGRAD_lr
+MULTILAYER Experiment ,10,5,model,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,model_architecture,"[128, 784]",[128],"[10, 128]",[10],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,batch_size,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,dataset,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,criterion,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,device,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,scheduler_params,,,,,None,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,validation_split_ratio,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,test_split_ratio,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MULTILAYER Experiment ,10,5,optimizer_params,,,,,,True,False,True,0.2,False,True,0.9,False,None,False,True,0.05,True,True,True,0.2,False,True,0.9,False,None,True,True,0.05,0.9,True,0.0001,0.05,"(0.9, 0.999)",1e-08,0.01,0.05,0,0.0,1e-10,0.05,"(0.9, 0.99)",0.001,True,0.05

@@ -1,0 +1,793 @@
+{
+  "milo": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "normalize": true,
+      "layer_wise": false,
+      "scale_aware": false,
+      "nesterov": true,
+      "adaptive": true,
+      "momentum": 0.7,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "fused": false,
+      "lr": 0.005
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "milo_LW": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "normalize": true,
+      "layer_wise": true,
+      "scale_aware": false,
+      "scale_factor": 0.2,
+      "adaptive": true,
+      "momentum": 0.7,
+      "nesterov": true,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "fused": false,
+      "lr": 0.005
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "SGD": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "momentum": 0.9243888834851457,
+      "nesterov": true,
+      "weight_decay": 0.0007372179800210986,
+      "lr": 0.004322751955330776
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "ADAGRAD": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr_decay": 0.011672818604275204,
+      "weight_decay": 0.0005150536103618078,
+      "eps": 4.035813545944358e-07,
+      "lr": 0.0028850098709688925
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "ADAMW": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "betas": [
+        0.95,
+        0.99
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.0005127298574431272,
+      "lr": 0.002896186158894085
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "NOVOGRAD": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.0009862467793612653,
+      "grad_averaging": true,
+      "lr": 0.010902490738765359
+    },
+    "batch_size": 64,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "scheduler_params": {
+      "scheduler": "None",
+      "params": {}
+    },
+    "validation_split_ratio": 0.15,
+    "test_split_ratio": 0.1,
+    "experiment_title": "DEEPCNN Experiment (Validation)",
+    "epochs": 10,
+    "num_runs": 5
+  }
+}
