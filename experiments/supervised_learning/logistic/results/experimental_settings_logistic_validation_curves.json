@@ -1,0 +1,119 @@
+{
+  "model": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "model_architecture": {
+    "linear.weight": [
+      10,
+      784
+    ],
+    "linear.bias": [
+      10
+    ],
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "batch_size": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "dataset": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "criterion": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "device": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "validation_split_ratio": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "test_split_ratio": {
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "optimizer_params": {
+    "MILO": {
+      "normalize": true,
+      "layer_wise": false,
+      "scale_aware": true,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": false,
+      "foreach": true,
+      "lr": 0.05
+    },
+    "MILO_LW": {
+      "normalize": true,
+      "layer_wise": true,
+      "scale_aware": true,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "lr": 0.05
+    },
+    "SGD": {
+      "momentum": 0.8998094246549302,
+      "nesterov": true,
+      "weight_decay": 0.000662839548718804,
+      "lr": 0.039339330820679634
+    },
+    "ADAMW": {
+      "betas": [
+        0.95,
+        0.99
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.0008181914254752851,
+      "lr": 0.0013284190648269844
+    },
+    "ADAGRAD": {
+      "lr_decay": 0.056726770795938034,
+      "weight_decay": 0.000794307692533354,
+      "eps": 7.2903296481874466e-09,
+      "lr": 0.024208948380582317
+    },
+    "NOVOGRAD": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.001743218868544122,
+      "grad_averaging": true,
+      "lr": 0.006286766705578023
+    },
+    "experiment_title": "LOGISTIC Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  }
+}

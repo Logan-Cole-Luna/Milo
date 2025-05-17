@@ -1,0 +1,11 @@
+experiment_title,epochs,num_runs,optimizer,linear.weight,linear.bias,scheduler,MILO_normalize,MILO_layer_wise,MILO_scale_aware,MILO_scale_factor,MILO_nesterov,MILO_adaptive,MILO_momentum,MILO_profile_time,MILO_max_group_size,MILO_use_cached_mapping,MILO_foreach,MILO_lr,MILO_LW_normalize,MILO_LW_layer_wise,MILO_LW_scale_aware,MILO_LW_scale_factor,MILO_LW_nesterov,MILO_LW_adaptive,MILO_LW_momentum,MILO_LW_profile_time,MILO_LW_max_group_size,MILO_LW_use_cached_mapping,MILO_LW_foreach,MILO_LW_lr,SGD_momentum,SGD_nesterov,SGD_weight_decay,SGD_lr,ADAMW_betas,ADAMW_eps,ADAMW_weight_decay,ADAMW_lr,ADAGRAD_lr_decay,ADAGRAD_weight_decay,ADAGRAD_eps,ADAGRAD_lr,NOVOGRAD_betas,NOVOGRAD_weight_decay,NOVOGRAD_grad_averaging,NOVOGRAD_lr
+LOGISTIC Experiment ,10,5,model,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,model_architecture,"[10, 784]",[10],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,batch_size,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,dataset,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,criterion,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,device,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,scheduler_params,,,None,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,validation_split_ratio,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,test_split_ratio,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+LOGISTIC Experiment ,10,5,optimizer_params,,,,True,False,True,0.2,False,True,0.9,False,None,False,True,0.05,True,True,True,0.2,False,True,0.9,False,None,True,True,0.05,0.8998094246549302,True,0.000662839548718804,0.039339330820679634,"[0.95, 0.99]",1e-08,0.0008181914254752851,0.0013284190648269844,0.056726770795938034,0.000794307692533354,7.2903296481874466e-09,0.024208948380582317,"[0.9, 0.98]",0.001743218868544122,True,0.006286766705578023
