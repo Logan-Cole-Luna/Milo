@@ -1,0 +1,818 @@
+{
+  "milo_lr_0.01": {
+    "model": "ResNet",
+    "model_architecture": {
+      "conv1.weight": [
+        64,
+        3,
+        3,
+        3
+      ],
+      "bn1.weight": [
+        64
+      ],
+      "bn1.bias": [
+        64
+      ],
+      "layer1.0.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn1.weight": [
+        64
+      ],
+      "layer1.0.bn1.bias": [
+        64
+      ],
+      "layer1.0.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn2.weight": [
+        64
+      ],
+      "layer1.0.bn2.bias": [
+        64
+      ],
+      "layer1.1.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn1.weight": [
+        64
+      ],
+      "layer1.1.bn1.bias": [
+        64
+      ],
+      "layer1.1.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn2.weight": [
+        64
+      ],
+      "layer1.1.bn2.bias": [
+        64
+      ],
+      "layer2.0.conv1.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "layer2.0.bn1.weight": [
+        128
+      ],
+      "layer2.0.bn1.bias": [
+        128
+      ],
+      "layer2.0.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.0.bn2.weight": [
+        128
+      ],
+      "layer2.0.bn2.bias": [
+        128
+      ],
+      "layer2.0.shortcut.0.weight": [
+        128,
+        64,
+        1,
+        1
+      ],
+      "layer2.0.shortcut.1.weight": [
+        128
+      ],
+      "layer2.0.shortcut.1.bias": [
+        128
+      ],
+      "layer2.1.conv1.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn1.weight": [
+        128
+      ],
+      "layer2.1.bn1.bias": [
+        128
+      ],
+      "layer2.1.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn2.weight": [
+        128
+      ],
+      "layer2.1.bn2.bias": [
+        128
+      ],
+      "layer3.0.conv1.weight": [
+        256,
+        128,
+        3,
+        3
+      ],
+      "layer3.0.bn1.weight": [
+        256
+      ],
+      "layer3.0.bn1.bias": [
+        256
+      ],
+      "layer3.0.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.0.bn2.weight": [
+        256
+      ],
+      "layer3.0.bn2.bias": [
+        256
+      ],
+      "layer3.0.shortcut.0.weight": [
+        256,
+        128,
+        1,
+        1
+      ],
+      "layer3.0.shortcut.1.weight": [
+        256
+      ],
+      "layer3.0.shortcut.1.bias": [
+        256
+      ],
+      "layer3.1.conv1.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn1.weight": [
+        256
+      ],
+      "layer3.1.bn1.bias": [
+        256
+      ],
+      "layer3.1.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn2.weight": [
+        256
+      ],
+      "layer3.1.bn2.bias": [
+        256
+      ],
+      "layer4.0.conv1.weight": [
+        512,
+        256,
+        3,
+        3
+      ],
+      "layer4.0.bn1.weight": [
+        512
+      ],
+      "layer4.0.bn1.bias": [
+        512
+      ],
+      "layer4.0.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.0.bn2.weight": [
+        512
+      ],
+      "layer4.0.bn2.bias": [
+        512
+      ],
+      "layer4.0.shortcut.0.weight": [
+        512,
+        256,
+        1,
+        1
+      ],
+      "layer4.0.shortcut.1.weight": [
+        512
+      ],
+      "layer4.0.shortcut.1.bias": [
+        512
+      ],
+      "layer4.1.conv1.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn1.weight": [
+        512
+      ],
+      "layer4.1.bn1.bias": [
+        512
+      ],
+      "layer4.1.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn2.weight": [
+        512
+      ],
+      "layer4.1.bn2.bias": [
+        512
+      ],
+      "linear.weight": [
+        10,
+        512
+      ],
+      "linear.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.01,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_lr_0.01",
+    "experiment_title": "ResNet18_CIFAR10 Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  },
+  "milo_lr_0.1": {
+    "model": "ResNet",
+    "model_architecture": {
+      "conv1.weight": [
+        64,
+        3,
+        3,
+        3
+      ],
+      "bn1.weight": [
+        64
+      ],
+      "bn1.bias": [
+        64
+      ],
+      "layer1.0.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn1.weight": [
+        64
+      ],
+      "layer1.0.bn1.bias": [
+        64
+      ],
+      "layer1.0.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn2.weight": [
+        64
+      ],
+      "layer1.0.bn2.bias": [
+        64
+      ],
+      "layer1.1.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn1.weight": [
+        64
+      ],
+      "layer1.1.bn1.bias": [
+        64
+      ],
+      "layer1.1.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn2.weight": [
+        64
+      ],
+      "layer1.1.bn2.bias": [
+        64
+      ],
+      "layer2.0.conv1.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "layer2.0.bn1.weight": [
+        128
+      ],
+      "layer2.0.bn1.bias": [
+        128
+      ],
+      "layer2.0.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.0.bn2.weight": [
+        128
+      ],
+      "layer2.0.bn2.bias": [
+        128
+      ],
+      "layer2.0.shortcut.0.weight": [
+        128,
+        64,
+        1,
+        1
+      ],
+      "layer2.0.shortcut.1.weight": [
+        128
+      ],
+      "layer2.0.shortcut.1.bias": [
+        128
+      ],
+      "layer2.1.conv1.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn1.weight": [
+        128
+      ],
+      "layer2.1.bn1.bias": [
+        128
+      ],
+      "layer2.1.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn2.weight": [
+        128
+      ],
+      "layer2.1.bn2.bias": [
+        128
+      ],
+      "layer3.0.conv1.weight": [
+        256,
+        128,
+        3,
+        3
+      ],
+      "layer3.0.bn1.weight": [
+        256
+      ],
+      "layer3.0.bn1.bias": [
+        256
+      ],
+      "layer3.0.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.0.bn2.weight": [
+        256
+      ],
+      "layer3.0.bn2.bias": [
+        256
+      ],
+      "layer3.0.shortcut.0.weight": [
+        256,
+        128,
+        1,
+        1
+      ],
+      "layer3.0.shortcut.1.weight": [
+        256
+      ],
+      "layer3.0.shortcut.1.bias": [
+        256
+      ],
+      "layer3.1.conv1.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn1.weight": [
+        256
+      ],
+      "layer3.1.bn1.bias": [
+        256
+      ],
+      "layer3.1.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn2.weight": [
+        256
+      ],
+      "layer3.1.bn2.bias": [
+        256
+      ],
+      "layer4.0.conv1.weight": [
+        512,
+        256,
+        3,
+        3
+      ],
+      "layer4.0.bn1.weight": [
+        512
+      ],
+      "layer4.0.bn1.bias": [
+        512
+      ],
+      "layer4.0.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.0.bn2.weight": [
+        512
+      ],
+      "layer4.0.bn2.bias": [
+        512
+      ],
+      "layer4.0.shortcut.0.weight": [
+        512,
+        256,
+        1,
+        1
+      ],
+      "layer4.0.shortcut.1.weight": [
+        512
+      ],
+      "layer4.0.shortcut.1.bias": [
+        512
+      ],
+      "layer4.1.conv1.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn1.weight": [
+        512
+      ],
+      "layer4.1.bn1.bias": [
+        512
+      ],
+      "layer4.1.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn2.weight": [
+        512
+      ],
+      "layer4.1.bn2.bias": [
+        512
+      ],
+      "linear.weight": [
+        10,
+        512
+      ],
+      "linear.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.1,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_lr_0.1",
+    "experiment_title": "ResNet18_CIFAR10 Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  },
+  "milo_lr_0.001": {
+    "model": "ResNet",
+    "model_architecture": {
+      "conv1.weight": [
+        64,
+        3,
+        3,
+        3
+      ],
+      "bn1.weight": [
+        64
+      ],
+      "bn1.bias": [
+        64
+      ],
+      "layer1.0.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn1.weight": [
+        64
+      ],
+      "layer1.0.bn1.bias": [
+        64
+      ],
+      "layer1.0.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.0.bn2.weight": [
+        64
+      ],
+      "layer1.0.bn2.bias": [
+        64
+      ],
+      "layer1.1.conv1.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn1.weight": [
+        64
+      ],
+      "layer1.1.bn1.bias": [
+        64
+      ],
+      "layer1.1.conv2.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "layer1.1.bn2.weight": [
+        64
+      ],
+      "layer1.1.bn2.bias": [
+        64
+      ],
+      "layer2.0.conv1.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "layer2.0.bn1.weight": [
+        128
+      ],
+      "layer2.0.bn1.bias": [
+        128
+      ],
+      "layer2.0.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.0.bn2.weight": [
+        128
+      ],
+      "layer2.0.bn2.bias": [
+        128
+      ],
+      "layer2.0.shortcut.0.weight": [
+        128,
+        64,
+        1,
+        1
+      ],
+      "layer2.0.shortcut.1.weight": [
+        128
+      ],
+      "layer2.0.shortcut.1.bias": [
+        128
+      ],
+      "layer2.1.conv1.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn1.weight": [
+        128
+      ],
+      "layer2.1.bn1.bias": [
+        128
+      ],
+      "layer2.1.conv2.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "layer2.1.bn2.weight": [
+        128
+      ],
+      "layer2.1.bn2.bias": [
+        128
+      ],
+      "layer3.0.conv1.weight": [
+        256,
+        128,
+        3,
+        3
+      ],
+      "layer3.0.bn1.weight": [
+        256
+      ],
+      "layer3.0.bn1.bias": [
+        256
+      ],
+      "layer3.0.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.0.bn2.weight": [
+        256
+      ],
+      "layer3.0.bn2.bias": [
+        256
+      ],
+      "layer3.0.shortcut.0.weight": [
+        256,
+        128,
+        1,
+        1
+      ],
+      "layer3.0.shortcut.1.weight": [
+        256
+      ],
+      "layer3.0.shortcut.1.bias": [
+        256
+      ],
+      "layer3.1.conv1.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn1.weight": [
+        256
+      ],
+      "layer3.1.bn1.bias": [
+        256
+      ],
+      "layer3.1.conv2.weight": [
+        256,
+        256,
+        3,
+        3
+      ],
+      "layer3.1.bn2.weight": [
+        256
+      ],
+      "layer3.1.bn2.bias": [
+        256
+      ],
+      "layer4.0.conv1.weight": [
+        512,
+        256,
+        3,
+        3
+      ],
+      "layer4.0.bn1.weight": [
+        512
+      ],
+      "layer4.0.bn1.bias": [
+        512
+      ],
+      "layer4.0.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.0.bn2.weight": [
+        512
+      ],
+      "layer4.0.bn2.bias": [
+        512
+      ],
+      "layer4.0.shortcut.0.weight": [
+        512,
+        256,
+        1,
+        1
+      ],
+      "layer4.0.shortcut.1.weight": [
+        512
+      ],
+      "layer4.0.shortcut.1.bias": [
+        512
+      ],
+      "layer4.1.conv1.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn1.weight": [
+        512
+      ],
+      "layer4.1.bn1.bias": [
+        512
+      ],
+      "layer4.1.conv2.weight": [
+        512,
+        512,
+        3,
+        3
+      ],
+      "layer4.1.bn2.weight": [
+        512
+      ],
+      "layer4.1.bn2.bias": [
+        512
+      ],
+      "linear.weight": [
+        10,
+        512
+      ],
+      "linear.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.001,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_lr_0.001",
+    "experiment_title": "ResNet18_CIFAR10 Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  }
+}

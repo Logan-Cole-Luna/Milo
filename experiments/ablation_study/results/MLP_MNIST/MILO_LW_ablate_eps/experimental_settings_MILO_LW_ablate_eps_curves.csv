@@ -1,0 +1,9 @@
+experiment_title,epochs,num_runs,optimizer,fc1.weight,fc1.bias,fc2.weight,fc2.bias,MILO_LW_eps_1e-05_lr,MILO_LW_eps_1e-05_normalize,MILO_LW_eps_1e-05_adaptive,MILO_LW_eps_1e-05_momentum,MILO_LW_eps_1e-05_eps,MILO_LW_eps_1e-05_weight_decay,MILO_LW_eps_1e-05_use_cached_mapping,MILO_LW_eps_1e-05_profile_time,MILO_LW_eps_1e-05_layer_wise,MILO_LW_eps_1e-05_scale_aware,MILO_LW_eps_1e-05_scale_factor,MILO_LW_eps_0.005_lr,MILO_LW_eps_0.005_normalize,MILO_LW_eps_0.005_adaptive,MILO_LW_eps_0.005_momentum,MILO_LW_eps_0.005_eps,MILO_LW_eps_0.005_weight_decay,MILO_LW_eps_0.005_use_cached_mapping,MILO_LW_eps_0.005_profile_time,MILO_LW_eps_0.005_layer_wise,MILO_LW_eps_0.005_scale_aware,MILO_LW_eps_0.005_scale_factor,MILO_LW_eps_0.05_lr,MILO_LW_eps_0.05_normalize,MILO_LW_eps_0.05_adaptive,MILO_LW_eps_0.05_momentum,MILO_LW_eps_0.05_eps,MILO_LW_eps_0.05_weight_decay,MILO_LW_eps_0.05_use_cached_mapping,MILO_LW_eps_0.05_profile_time,MILO_LW_eps_0.05_layer_wise,MILO_LW_eps_0.05_scale_aware,MILO_LW_eps_0.05_scale_factor
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,model,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,model_architecture,"[128, 784]",[128],"[10, 128]",[10],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,batch_size,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,dataset,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,criterion,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,device,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,config_name,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_LW_ablate_eps,10,2,optimizer_params,,,,,0.01,True,True,0.9,1e-05,0.0001,True,False,True,True,0.2,0.01,True,True,0.9,0.005,0.0001,True,False,True,True,0.2,0.01,True,True,0.9,0.05,0.0001,True,False,True,True,0.2
