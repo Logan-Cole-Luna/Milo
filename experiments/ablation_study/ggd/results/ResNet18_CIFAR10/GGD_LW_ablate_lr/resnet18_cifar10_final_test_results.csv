@@ -1,0 +1,10 @@
+optimizer,run,test_loss,test_accuracy,test_f1_score,test_auc,test_eval_time_seconds
+milo_LW_lr_0.01,1,,,,,
+milo_LW_lr_0.01,2,,,,,
+milo_LW_lr_0.01,3,,,,,
+milo_LW_lr_0.1,1,,,,,
+milo_LW_lr_0.1,2,,,,,
+milo_LW_lr_0.1,3,,,,,
+milo_LW_lr_0.001,1,,,,,
+milo_LW_lr_0.001,2,,,,,
+milo_LW_lr_0.001,3,,,,,

@@ -1,0 +1,116 @@
+{
+  "milo_baseline_lr": {
+    "model": "MLP",
+    "model_architecture": {
+      "fc1.weight": [
+        128,
+        784
+      ],
+      "fc1.bias": [
+        128
+      ],
+      "fc2.weight": [
+        10,
+        128
+      ],
+      "fc2.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.01,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "MNIST",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_baseline_lr",
+    "experiment_title": "MLP_MNIST Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  },
+  "milo_lr_0.1": {
+    "model": "MLP",
+    "model_architecture": {
+      "fc1.weight": [
+        128,
+        784
+      ],
+      "fc1.bias": [
+        128
+      ],
+      "fc2.weight": [
+        10,
+        128
+      ],
+      "fc2.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.1,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "MNIST",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_lr_0.1",
+    "experiment_title": "MLP_MNIST Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  },
+  "milo_lr_0.001": {
+    "model": "MLP",
+    "model_architecture": {
+      "fc1.weight": [
+        128,
+        784
+      ],
+      "fc1.bias": [
+        128
+      ],
+      "fc2.weight": [
+        10,
+        128
+      ],
+      "fc2.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.001,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": false,
+      "scale_aware": false
+    },
+    "batch_size": 128,
+    "dataset": "MNIST",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_lr_0.001",
+    "experiment_title": "MLP_MNIST Ablation: milo_ablate_lr",
+    "epochs": 15,
+    "num_runs": 3
+  }
+}

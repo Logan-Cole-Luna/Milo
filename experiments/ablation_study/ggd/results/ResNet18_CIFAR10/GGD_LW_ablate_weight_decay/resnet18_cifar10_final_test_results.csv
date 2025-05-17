@@ -1,0 +1,10 @@
+optimizer,run,test_loss,test_accuracy,test_f1_score,test_auc,test_eval_time_seconds
+milo_LW_weight_decay_0.0001,1,,,,,
+milo_LW_weight_decay_0.0001,2,,,,,
+milo_LW_weight_decay_0.0001,3,,,,,
+milo_LW_weight_decay_0.001,1,,,,,
+milo_LW_weight_decay_0.001,2,,,,,
+milo_LW_weight_decay_0.001,3,,,,,
+milo_LW_weight_decay_0.0,1,,,,,
+milo_LW_weight_decay_0.0,2,,,,,
+milo_LW_weight_decay_0.0,3,,,,,

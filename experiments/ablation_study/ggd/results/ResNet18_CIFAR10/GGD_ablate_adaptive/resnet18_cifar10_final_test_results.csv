@@ -1,0 +1,7 @@
+optimizer,run,test_loss,test_accuracy,test_f1_score,test_auc,test_eval_time_seconds
+milo_adaptive_True,1,,,,,
+milo_adaptive_True,2,,,,,
+milo_adaptive_True,3,,,,,
+milo_adaptive_False,1,,,,,
+milo_adaptive_False,2,,,,,
+milo_adaptive_False,3,,,,,

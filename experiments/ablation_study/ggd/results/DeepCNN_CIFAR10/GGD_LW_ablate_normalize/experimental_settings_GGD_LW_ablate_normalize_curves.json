@@ -1,0 +1,262 @@
+{
+  "milo_LW_normalize_True": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.01,
+      "normalize": true,
+      "adaptive": true,
+      "momentum": 0.9,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": true,
+      "scale_aware": true,
+      "scale_factor": 0.2
+    },
+    "batch_size": 128,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_LW_normalize_True",
+    "experiment_title": "DeepCNN_CIFAR10 Ablation: milo_LW_ablate_normalize",
+    "epochs": 15,
+    "num_runs": 3
+  },
+  "milo_LW_normalize_False": {
+    "model": "DeepCNN",
+    "model_architecture": {
+      "conv_layer1.0.weight": [
+        32,
+        3,
+        3,
+        3
+      ],
+      "conv_layer1.0.bias": [
+        32
+      ],
+      "conv_layer1.2.weight": [
+        32
+      ],
+      "conv_layer1.2.bias": [
+        32
+      ],
+      "conv_layer1.3.weight": [
+        32,
+        32,
+        3,
+        3
+      ],
+      "conv_layer1.3.bias": [
+        32
+      ],
+      "conv_layer1.5.weight": [
+        32
+      ],
+      "conv_layer1.5.bias": [
+        32
+      ],
+      "conv_layer2.0.weight": [
+        64,
+        32,
+        3,
+        3
+      ],
+      "conv_layer2.0.bias": [
+        64
+      ],
+      "conv_layer2.2.weight": [
+        64
+      ],
+      "conv_layer2.2.bias": [
+        64
+      ],
+      "conv_layer2.3.weight": [
+        64,
+        64,
+        3,
+        3
+      ],
+      "conv_layer2.3.bias": [
+        64
+      ],
+      "conv_layer2.5.weight": [
+        64
+      ],
+      "conv_layer2.5.bias": [
+        64
+      ],
+      "conv_layer3.0.weight": [
+        128,
+        64,
+        3,
+        3
+      ],
+      "conv_layer3.0.bias": [
+        128
+      ],
+      "conv_layer3.2.weight": [
+        128
+      ],
+      "conv_layer3.2.bias": [
+        128
+      ],
+      "conv_layer3.3.weight": [
+        128,
+        128,
+        3,
+        3
+      ],
+      "conv_layer3.3.bias": [
+        128
+      ],
+      "conv_layer3.5.weight": [
+        128
+      ],
+      "conv_layer3.5.bias": [
+        128
+      ],
+      "fc_layer.1.weight": [
+        512,
+        2048
+      ],
+      "fc_layer.1.bias": [
+        512
+      ],
+      "fc_layer.4.weight": [
+        10,
+        512
+      ],
+      "fc_layer.4.bias": [
+        10
+      ]
+    },
+    "optimizer_params": {
+      "lr": 0.01,
+      "normalize": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "eps": 1e-05,
+      "weight_decay": 0.0001,
+      "use_cached_mapping": true,
+      "profile_time": false,
+      "layer_wise": true,
+      "scale_aware": true,
+      "scale_factor": 0.2
+    },
+    "batch_size": 128,
+    "dataset": "CIFAR10",
+    "criterion": "CrossEntropyLoss",
+    "device": "cuda",
+    "config_name": "milo_LW_normalize_False",
+    "experiment_title": "DeepCNN_CIFAR10 Ablation: milo_LW_ablate_normalize",
+    "epochs": 15,
+    "num_runs": 3
+  }
+}

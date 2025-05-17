@@ -1,0 +1,9 @@
+experiment_title,epochs,num_runs,optimizer,fc1.weight,fc1.bias,fc2.weight,fc2.bias,MILO_lr_0.01_lr,MILO_lr_0.01_normalize,MILO_lr_0.01_adaptive,MILO_lr_0.01_momentum,MILO_lr_0.01_eps,MILO_lr_0.01_weight_decay,MILO_lr_0.01_use_cached_mapping,MILO_lr_0.01_profile_time,MILO_lr_0.01_layer_wise,MILO_lr_0.01_scale_aware,MILO_lr_0.1_lr,MILO_lr_0.1_normalize,MILO_lr_0.1_adaptive,MILO_lr_0.1_momentum,MILO_lr_0.1_eps,MILO_lr_0.1_weight_decay,MILO_lr_0.1_use_cached_mapping,MILO_lr_0.1_profile_time,MILO_lr_0.1_layer_wise,MILO_lr_0.1_scale_aware,MILO_lr_0.001_lr,MILO_lr_0.001_normalize,MILO_lr_0.001_adaptive,MILO_lr_0.001_momentum,MILO_lr_0.001_eps,MILO_lr_0.001_weight_decay,MILO_lr_0.001_use_cached_mapping,MILO_lr_0.001_profile_time,MILO_lr_0.001_layer_wise,MILO_lr_0.001_scale_aware
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,model,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,model_architecture,"[128, 784]",[128],"[10, 128]",[10],,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,batch_size,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,dataset,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,criterion,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,device,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,config_name,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+MLP_MNIST Ablation: MILO_ablate_lr,10,2,optimizer_params,,,,,0.01,True,True,0.9,1e-05,0.0001,True,False,False,False,0.1,True,True,0.9,1e-05,0.0001,True,False,False,False,0.001,True,True,0.9,1e-05,0.0001,True,False,False,False
