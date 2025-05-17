@@ -1,0 +1,6 @@
+optimizer,step,train_loss,dev_loss
+MILO_HYBRID,0,tensor(10.7438),tensor(10.8891)
+MILO_HYBRID,200,tensor(6.2921),tensor(7.4029)
+MILO_HYBRID,400,tensor(6.0133),tensor(7.4430)
+MILO_HYBRID,600,tensor(6.2071),tensor(7.3027)
+MILO_HYBRID,800,tensor(6.0551),tensor(7.2784)
