@@ -8,7 +8,7 @@ This repository provides the official implementation and experimental code for "
 ```bash
 # Clone the repository
 git clone https://github.com/username/Milo
-cd GroupGradientDescent
+cd Milo
 
 # Install dependencies
 pip install -r requirements.txt
@@ -24,7 +24,7 @@ Requirements:
 For reproducibility, we recommend creating a conda environment:
 
 ```bash
-conda create -n milo python=3.8
+conda create -n milo python=3.10
 conda activate milo
 pip install -r requirements.txt
 ```
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 ### Repository Structure
 
 ```
-GroupGradientDescent/
+Milo/
 ├── milo.py                  # Core MILO optimizer implementation
 ├── experiments/             # Experimental code and configurations
 │   ├── supervised_learning/ # Vision and other supervised learning tasks
@@ -44,9 +44,15 @@ GroupGradientDescent/
 │   ├── RL/                  # Reinforcement learning experiments
 │   │   ├── rl_experiment.py
 │   │   └── config.py
-│   └── loss_maps/           # Loss landscape analysis
-│       ├── loss_map.py
-│       └── config.py
+│   ├── loss_maps/           # Loss landscape analysis
+│   │   ├── loss_map.py
+│   │   └── config.py
+│   └── LLM/                 # Language model training experiments
+│       ├── config/
+│       │   └── config.py    # LLM experiment configuration
+│       ├── scripts/         # Training and evaluation scripts
+│       │   └── train_multi_optimizer.py
+│       └── visuals/        # Generated plots and visualizations
 ├── data/                    # Placeholder for datasets (downloaded automatically)
 ├── requirements.txt         # Python dependencies
 └── README.md                # This file
@@ -122,11 +128,38 @@ To generate visualizations of optimizer trajectories on benchmark functions:
 python experiments/loss_maps/loss_map.py
 ```
 
-## Acknowledgements
+### LLM Training Experiments
+To run comparative optimizer experiments on transformer language models:
+```bash
+python experiments/LLM/scripts/train_multi_optimizer.py
+```
+
+Configuration for the LLM experiments can be found in `experiments/LLM/config/config.py`.
+
+
+### Acknowledgements
 
 Our work utilizes or is inspired by concepts from the following repositories:
-*   **train-llm-from-scratch** (MIT License; \url{https://github.com/FareedKhan-dev/train-llm-from-scratch}) \citep{FareedKhandev2025trainLLM}. Our LLM training code was adapted to support multiple optimizer runs for comparative analysis.
-*   **NovoGrad-pytorch** (MIT License; \url{https://github.com/lonePatient/NovoGrad-pytorch}) \citep{lonePatient2019novograd}.
+
+1. **[train-llm-from-scratch](https://github.com/FareedKhan-dev/train-llm-from-scratch)** (MIT License)  
+  - Citation: \citep{FareedKhandev2025trainLLM}  
+  - Adaptations:  
+    Our LLM training code was adapted to support multiple optimizer runs for comparative analysis. The script allows customization of training runs with the following arguments:
+    - `--optimizers`: List of optimizers to compare (default: `MILO MILO_LW SGD ADAMW ADAGRAD NOVOGRAD`)
+    - `--num_runs`: Number of training runs per optimizer for statistical analysis (default: `5`)
+    - `--experiment_title`: Custom title for the experiment plots
+
+    The script performs the following tasks:
+    1. Trains a small transformer model with each specified optimizer.
+    2. Generates comparative visualizations, including:
+      - Training and validation loss curves
+      - Loss vs. wall time analysis
+      - Layer-wise gradient norm analysis
+      - Gradient imbalance ratio plots
+    3. Saves detailed metrics to CSV for further analysis.
+
+2. **[NovoGrad-pytorch](https://github.com/lonePatient/NovoGrad-pytorch)** (MIT License)  
+  - Citation: \citep{lonePatient2019novograd}
 
 ## Citing MILO
 
