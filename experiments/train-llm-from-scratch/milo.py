@@ -29,11 +29,11 @@ class milo(Optimizer):  # noqa: D101
         layer_wise: bool = True,
         group_size: Optional[int] = None,
         eps: float = 1e-5,
-        scale_aware: bool = False,
+        scale_aware: bool = True,
         scale_factor: float = 0.2,
         max_group_size: Optional[int] = 5000,
         clip_norm: Optional[float] = None,
-        adaptive: bool = False,
+        adaptive: bool = True,
         adaptive_eps: float = 1e-8,
         disable_layer_mapping: bool = False,
         profile_time: bool = False,
@@ -166,6 +166,11 @@ class milo(Optimizer):  # noqa: D101
         return {default_name: target_param}
 
     def __setstate__(self, state):
+        """Restore the optimizer state.
+
+        Args:
+            state (dict): The state dictionary to load.
+        """
         super().__setstate__(state)
         for group in self.param_groups:
             group.setdefault("nesterov", False)
@@ -189,6 +194,21 @@ class milo(Optimizer):  # noqa: D101
             group.setdefault("layer_lr_multipliers", {}) # Added
 
     def _init_group(self, group, params, grads, momentum_buffer_list):
+        """Initialize a parameter group for the optimization step.
+
+        This method populates lists of parameters, gradients, and momentum buffers
+        for the current group. It also handles gradient clipping and initializes
+        adaptive scaling states if required.
+
+        Args:
+            group (dict): The parameter group being processed.
+            params (list): An empty list to be filled with parameter tensors.
+            grads (list): An empty list to be filled with gradient tensors.
+            momentum_buffer_list (list): An empty list to be filled with momentum buffers.
+
+        Returns:
+            bool: True if any gradient in the group is sparse, False otherwise.
+        """
         has_sparse_grad = False
 
         for p in group["params"]:
@@ -445,6 +465,27 @@ class milo(Optimizer):  # noqa: D101
         adaptive: bool,
         adaptive_eps: float,
     ):
+        """Performs the SGD update for a single tensor (parameter).
+
+        This method is used when the `foreach` option is False or not applicable.
+        It applies weight decay, momentum, Nesterov momentum, adaptive scaling (if enabled),
+        and the learning rate update to a single parameter.
+
+        Args:
+            params (List[Tensor]): List of parameters in the current group.
+            grads (List[Tensor]): List of corresponding gradients.
+            momentum_buffer_list (List[Optional[Tensor]]): List of momentum buffers.
+            group (dict): The parameter group dictionary, containing optimizer settings like layer_lr_multipliers.
+            weight_decay (float): Weight decay factor.
+            momentum (float): Momentum factor.
+            lr (float): Learning rate.
+            dampening (float): Dampening factor for momentum.
+            nesterov (bool): Whether to use Nesterov momentum.
+            maximize (bool): Whether to maximize (negate gradients).
+            has_sparse_grad (bool): Indicates if sparse gradients are present (not directly used here but part of signature).
+            adaptive (bool): Whether to use adaptive gradient scaling.
+            adaptive_eps (float): Epsilon for adaptive scaling stability.
+        """
         for i, param in enumerate(params):
             grad = grads[i] if not maximize else -grads[i]
 
@@ -503,6 +544,28 @@ class milo(Optimizer):  # noqa: D101
         adaptive: bool,
         adaptive_eps: float,
     ):
+        """Performs the SGD update for multiple tensors using foreach operations.
+
+        This method is used when the `foreach` option is True. It leverages PyTorch's
+        `_foreach_*` operations for potentially faster updates on multiple tensors
+        simultaneously. It applies weight decay, momentum, Nesterov momentum, adaptive
+        scaling (if enabled), and learning rate updates.
+
+        Args:
+            params (List[Tensor]): List of parameters in the current group.
+            grads (List[Tensor]): List of corresponding gradients.
+            momentum_buffer_list (List[Optional[Tensor]]): List of momentum buffers.
+            group (dict): The parameter group dictionary, containing optimizer settings like layer_lr_multipliers.
+            weight_decay (float): Weight decay factor.
+            momentum (float): Momentum factor.
+            lr (float): Learning rate.
+            dampening (float): Dampening factor for momentum.
+            nesterov (bool): Whether to use Nesterov momentum.
+            maximize (bool): Whether to maximize (negate gradients).
+            has_sparse_grad (bool): Indicates if sparse gradients are present.
+            adaptive (bool): Whether to use adaptive gradient scaling.
+            adaptive_eps (float): Epsilon for adaptive scaling stability.
+        """
         if len(params) == 0:
             return
 
