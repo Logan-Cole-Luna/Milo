@@ -1,6 +1,0 @@
-optimizer,step,train_loss,dev_loss
-MILO_LW,0,tensor(9.4960),tensor(10.2704)
-MILO_LW,200,tensor(6.1674),tensor(7.3919)
-MILO_LW,400,tensor(5.9772),tensor(7.3174)
-MILO_LW,600,tensor(5.8251),tensor(7.3492)
-MILO_LW,800,tensor(5.6461),tensor(7.2234)

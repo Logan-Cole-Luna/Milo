@@ -47,7 +47,7 @@ Milo/
 │   ├── loss_maps/           # Loss landscape analysis
 │   │   ├── loss_map.py
 │   │   └── config.py
-│   └── LLM/                 # Language model training experiments
+│   └── train-llm-from-scratch/  # Language model training experiments
 │       ├── config/
 │       │   └── config.py    # LLM experiment configuration
 │       ├── scripts/         # Training and evaluation scripts
@@ -131,7 +131,7 @@ python experiments/loss_maps/loss_map.py
 ### LLM Training Experiments
 To run comparative optimizer experiments on transformer language models:
 ```bash
-python experiments/LLM/scripts/train_multi_optimizer.py
+python experiments/train-llm-from-scratch/scripts/train_multi_optimizer.py
 ```
 
 Configuration for the LLM experiments can be found in `experiments/LLM/config/config.py`.

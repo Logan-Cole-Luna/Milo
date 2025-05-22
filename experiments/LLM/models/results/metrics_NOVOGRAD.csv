@@ -1,6 +1,0 @@
-optimizer,step,train_loss,dev_loss
-NOVOGRAD,0,tensor(10.7783),tensor(10.9188)
-NOVOGRAD,200,tensor(6.6686),tensor(8.3556)
-NOVOGRAD,400,tensor(6.5607),tensor(7.7967)
-NOVOGRAD,600,tensor(6.5489),tensor(7.7589)
-NOVOGRAD,800,tensor(6.2789),tensor(7.6765)
