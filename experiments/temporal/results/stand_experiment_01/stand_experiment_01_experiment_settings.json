@@ -1,0 +1,18 @@
+{
+    "experiment_name": "stand_experiment_01",
+    "model_type": "single_frame",
+    "sequence_length": "N/A",
+    "data_root": "C:/data/processed_anti_uav",
+    "batch_size": 16,
+    "epochs": 20,
+    "learning_rate": 0.0001,
+    "device": "cuda",
+    "overfit_mode": false,
+    "overfit_samples": "N/A",
+    "train_subset_fraction": 1.0,
+    "optimizers_tested": [
+        "AdamW"
+    ],
+    "runs_per_optimizer": 1,
+    "date_run": "2025-06-10 21:23:02"
+}

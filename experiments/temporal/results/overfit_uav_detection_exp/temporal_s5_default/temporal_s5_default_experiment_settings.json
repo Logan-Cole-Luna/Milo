@@ -1,0 +1,24 @@
+{
+    "experiment_group_name": "overfit_uav_detection_exp",
+    "config_name": "temporal_s5_default",
+    "model_type": "temporal",
+    "sequence_length": 5,
+    "data_root": "C:/data/processed_anti_uav",
+    "batch_size": 32,
+    "epochs": 50,
+    "learning_rate": 0.0001,
+    "device": "cuda",
+    "overfit_mode": true,
+    "overfit_samples": 32,
+    "train_subset_fraction": "N/A (Overfitting)",
+    "optimizers_tested": [
+        "AdamW"
+    ],
+    "runs_per_optimizer": 1,
+    "date_run": "2025-06-10 22:15:50",
+    "config_details": {
+        "name": "temporal_s5_default",
+        "MODEL_TYPE": "temporal",
+        "SEQ_LEN": 5
+    }
+}

@@ -1,0 +1,41 @@
+{
+  "config_name": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "model_type": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "seq_len": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "batch_size": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "epochs": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "learning_rate": {
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  },
+  "optimizer_params": {
+    "AdamW": {
+      "scheduler": "CosineAnnealingLR",
+      "params": {}
+    },
+    "experiment_title": "temporal_s5_default",
+    "epochs": 50,
+    "num_runs": 1
+  }
+}

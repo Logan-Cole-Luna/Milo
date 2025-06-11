@@ -1,0 +1,8 @@
+experiment_title,epochs,num_runs,optimizer,AdamW_scheduler,AdamW_params
+temporal_s5_default,50,1,config_name,,
+temporal_s5_default,50,1,model_type,,
+temporal_s5_default,50,1,seq_len,,
+temporal_s5_default,50,1,batch_size,,
+temporal_s5_default,50,1,epochs,,
+temporal_s5_default,50,1,learning_rate,,
+temporal_s5_default,50,1,optimizer_params,CosineAnnealingLR,{}

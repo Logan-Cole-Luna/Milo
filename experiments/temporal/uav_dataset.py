@@ -1,11 +1,53 @@
+"""
+Defines the FrameBBOXDataset class for loading UAV image and bounding box data.
+This dataset class is designed to work with frame-level or temporal sequence data
+for bounding box regression tasks, integrating with Albumentations for transformations.
+"""
+
 from pathlib import Path
 import torch
 from torch.utils.data import Dataset
 import cv2 # For cv2.imread and cv2.cvtColor
 
 class FrameBBOXDataset(Dataset):
-    """Frame‐level UAV bbox regression with Albumentations."""
+    """
+    A PyTorch Dataset for loading frame-level or temporal sequences of UAV images
+    and their corresponding bounding box annotations.
+
+    Handles loading images, parsing YOLO-style label files, and applying
+    Albumentations transforms. Can operate in single-frame or temporal mode.
+    In temporal mode, it loads a sequence of `seq_len` frames and the label
+    for the last frame in the sequence.
+
+    Attributes:
+        img_dir (Path): Directory containing image files.
+        lbl_dir (Path): Directory containing label files (YOLO format).
+        transform (callable, optional): Albumentations transform pipeline.
+        samples (list): List of tuples, where each tuple contains the
+                        image path(s) and the corresponding bounding box tensor.
+                        For temporal data, image paths is a list of Path objects.
+        seq_len (int): Length of the image sequence for temporal data.
+        is_temporal (bool): Flag indicating if the dataset is for temporal data.
+        train_subset_fraction (float): Fraction of training data to use.
+    """
     def __init__(self, root, split, transform=None, load_n_samples=None, seq_len=1, is_temporal=False, train_subset_fraction=1.0):
+        """
+        Initializes the FrameBBOXDataset.
+
+        Args:
+            root (str or Path): Root directory of the dataset (e.g., 'Anti-UAV').
+            split (str): Data split to load (e.g., 'train', 'val', 'test').
+            transform (callable, optional): Albumentations transform to apply.
+            load_n_samples (int, optional): If specified, load only the first
+                                           `load_n_samples` valid samples.
+            seq_len (int): Sequence length for temporal data. Defaults to 1 (single frame).
+            is_temporal (bool): True if loading temporal sequences, False otherwise.
+            train_subset_fraction (float): Fraction of the training dataset to use (0.0 to 1.0).
+                                           Only applies if split is 'train'. Defaults to 1.0.
+
+        Raises:
+            RuntimeError: If no valid annotated frames are found for the specified split.
+        """
         self.img_dir = Path(root) / "images" / split
         self.lbl_dir = Path(root) / "labels" / split
         self.transform = transform
@@ -107,9 +149,23 @@ class FrameBBOXDataset(Dataset):
         print(f"[INFO] Dataset '{split}': Successfully loaded {len(self.samples)} samples.")
 
     def __len__(self):
+        """Returns the total number of samples in the dataset."""
         return len(self.samples)
 
     def __getitem__(self, idx):
+        """
+        Retrieves the sample (image/sequence and bounding box) at the given index.
+
+        Args:
+            idx (int): Index of the sample to retrieve.
+
+        Returns:
+            tuple:
+                - img_tensor (torch.Tensor): The image tensor or frame cuboid tensor.
+                  For single-frame: [C, H, W].
+                  For temporal: [T, C, H, W].
+                - bbox (torch.Tensor): The bounding box tensor [cx, cy, w, h].
+        """
         if self.is_temporal:
             img_paths_sequence, bbox_current = self.samples[idx]
             frames = []
