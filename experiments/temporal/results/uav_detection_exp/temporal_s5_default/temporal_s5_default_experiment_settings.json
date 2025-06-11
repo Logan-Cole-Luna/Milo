@@ -1,0 +1,24 @@
+{
+    "experiment_group_name": "uav_detection_exp",
+    "config_name": "temporal_s5_default",
+    "model_type": "temporal",
+    "sequence_length": 5,
+    "data_root": "C:/data/processed_anti_uav",
+    "batch_size": 32,
+    "epochs": 50,
+    "learning_rate": 0.0001,
+    "device": "cuda",
+    "overfit_mode": false,
+    "overfit_samples": "N/A",
+    "train_subset_fraction": 0.5,
+    "optimizers_tested": [
+        "AdamW"
+    ],
+    "runs_per_optimizer": 1,
+    "date_run": "2025-06-10 23:49:59",
+    "config_details": {
+        "name": "temporal_s5_default",
+        "MODEL_TYPE": "temporal",
+        "SEQ_LEN": 5
+    }
+}

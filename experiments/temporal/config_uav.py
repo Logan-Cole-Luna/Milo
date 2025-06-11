@@ -9,7 +9,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # --- Data Settings ---
 DATA_ROOT = "C:/data/processed_anti_uav"
-TRAIN_SUBSET_FRACTION = 0.8
+TRAIN_SUBSET_FRACTION = 0.5
 
 # --- Training Hyperparameters (Global defaults, can be overridden in EXPERIMENT_CONFIGURATIONS) ---
 BATCH_SIZE = 32

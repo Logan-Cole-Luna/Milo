@@ -1,0 +1,8 @@
+experiment_title,epochs,num_runs,optimizer,AdamW_scheduler,AdamW_params
+single_frame_default,50,1,config_name,,
+single_frame_default,50,1,model_type,,
+single_frame_default,50,1,seq_len,,
+single_frame_default,50,1,batch_size,,
+single_frame_default,50,1,epochs,,
+single_frame_default,50,1,learning_rate,,
+single_frame_default,50,1,optimizer_params,CosineAnnealingLR,{}
