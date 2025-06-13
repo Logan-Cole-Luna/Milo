@@ -69,7 +69,7 @@ def plot_resource_usage(resource_df, visuals_dir, experiment_file_id, base_exper
     # --- Plot Peak GPU Memory --- #
     if 'peak_gpu_memory_allocated_gb' in resource_df.columns:
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=resource_df, x='optimizer', y='peak_gpu_memory_allocated_gb', ci='sd', capsize=.2, palette="viridis")
+        sns.barplot(data=resource_df, x='optimizer', y='peak_gpu_memory_allocated_gb', errorbar='sd', capsize=.2, palette="viridis", hue='optimizer', legend=False)
         plt.title(f'Peak GPU Memory Usage for {base_experiment_name}')
         plt.ylabel('Peak GPU Memory (GB)')
         plt.xlabel('Optimizer')
@@ -83,7 +83,7 @@ def plot_resource_usage(resource_df, visuals_dir, experiment_file_id, base_exper
     # --- Plot Total Duration --- #
     if 'duration_seconds' in resource_df.columns:
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=resource_df, x='optimizer', y='duration_seconds', ci='sd', capsize=.2, palette="viridis")
+        sns.barplot(data=resource_df, x='optimizer', y='duration_seconds', errorbar='sd', capsize=.2, palette="viridis", hue='optimizer', legend=False)
         plt.title(f'Total Training Duration for {base_experiment_name}')
         plt.ylabel('Duration (seconds)')
         plt.xlabel('Optimizer')
@@ -97,7 +97,7 @@ def plot_resource_usage(resource_df, visuals_dir, experiment_file_id, base_exper
     # --- Plot GPU Utilization (End) --- #
     if 'end_gpu_utilization_percent' in resource_df.columns:
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=resource_df, x='optimizer', y='end_gpu_utilization_percent', ci='sd', capsize=.2, palette="viridis")
+        sns.barplot(data=resource_df, x='optimizer', y='end_gpu_utilization_percent', errorbar='sd', capsize=.2, palette="viridis", hue='optimizer', legend=False)
         plt.title(f'GPU Utilization (End of Training) for {base_experiment_name}')
         plt.ylabel('GPU Utilization (%)')
         plt.xlabel('Optimizer')
@@ -112,7 +112,7 @@ def plot_resource_usage(resource_df, visuals_dir, experiment_file_id, base_exper
     # --- Plot CPU RAM Increase --- #
     if 'memory_increase_gb' in resource_df.columns:
         plt.figure(figsize=(10, 6))
-        sns.barplot(data=resource_df, x='optimizer', y='memory_increase_gb', ci='sd', capsize=.2, palette="viridis")
+        sns.barplot(data=resource_df, x='optimizer', y='memory_increase_gb', errorbar='sd', capsize=.2, palette="viridis", hue='optimizer', legend=False)
         plt.title(f'CPU RAM Increase During Training for {base_experiment_name}')
         plt.ylabel('CPU RAM Increase (GB)')
         plt.xlabel('Optimizer')
@@ -345,8 +345,6 @@ def plot_seaborn_style_with_error_bars(
 
     plt.tight_layout(rect=[0, 0.03, 1, 1])
     filepath_png = os.path.join(visuals_dir, filename + '.png')
-    filepath_pdf = os.path.join(visuals_dir, filename + '.pdf')
     plt.savefig(filepath_png, bbox_inches='tight')
-    plt.savefig(filepath_pdf, bbox_inches='tight')
     plt.close()
-    print(f"Saved plot to {filepath_png} and {filepath_pdf}")
+    print(f"Saved plot to {filepath_png}")
