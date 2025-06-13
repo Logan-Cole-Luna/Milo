@@ -36,11 +36,11 @@ def bbox_to_pixels(bbox_norm, width, height):
 def main():
     # Configuration (hardcoded)
     # 3700000000002_113556_2
-    INPUT_PATH = Path(r"C:\\Users\\Logan\\Downloads\\Anti-UAV-RGBT\\test\\20190925_124000_1_9\\visible.mp4")
-    SINGLE_MODEL_PATH = Path(r"experiments\temporal\results\uav_detection_exp_v2\single_frame_default_resnet18\AdamW\single_frame_default_resnet18_AdamW_model.onnx")
-    TEMPORAL_MODEL_PATH = Path(r"experiments\temporal\results\uav_detection_exp_v2\temporal_s5_default_resnet18\AdamW\temporal_s5_default_resnet18_AdamW_model.onnx")
+    INPUT_PATH = Path(r"C:\Users\Logan\Downloads\train_uav\train\3700000000002_113556_2")
+    SINGLE_MODEL_PATH = Path(r"experiments\temporal\results\uav_detection_v3\single_frame_default_resnet18\AdamW\single_frame_default_resnet18_AdamW_model.onnx")
+    TEMPORAL_MODEL_PATH = Path(r"experiments\temporal\results\uav_detection_v3\temporal_s5_default_resnet18\AdamW\temporal_s5_default_resnet18_AdamW_model.onnx")
     SEQ_LEN = 5
-    OUTPUT_PATH = Path("output_video.mp4")
+    OUTPUT_PATH = Path("experiments/temporal/output_video_v3.mp4")
 
     input_path = INPUT_PATH
     single_model_path = SINGLE_MODEL_PATH
@@ -57,10 +57,15 @@ def main():
         print(f"Loading temporal model from {temporal_model_path}")
         temporal_sess = onnxruntime.InferenceSession(str(temporal_model_path))
 
+    # Initialize sequence buffer (for temporal inference) and font for annotations
+    seq_buffer = deque(maxlen=seq_len)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
     # Determine input type
     ext = input_path.suffix.lower()
     video_exts = {'.mp4', '.avi', '.mov', '.mkv'}
-    is_video = ext in video_exts
+    is_video = input_path.is_file() and ext in video_exts
+    is_dir = input_path.is_dir()
 
     if is_video:
         cap = cv2.VideoCapture(str(input_path))
@@ -74,15 +79,47 @@ def main():
                 OUTPUT_PATH.unlink()
             fourcc = cv2.VideoWriter_fourcc(*'mp4v')
             writer = cv2.VideoWriter(str(OUTPUT_PATH), fourcc, fps, (width, height))
+    elif is_dir:
+        # Process a folder of frames into a single MP4 video
+        frame_files = sorted(input_path.glob("*.jpg")) + sorted(input_path.glob("*.png"))
+        if not frame_files:
+            print(f"No images found in directory {input_path}")
+            return
+        # Determine video size from first frame
+        first_frame = cv2.imread(str(frame_files[0]))
+        height, width = first_frame.shape[:2]
+        # Initialize VideoWriter for MP4
+        if OUTPUT_PATH.exists():
+            OUTPUT_PATH.unlink()
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        writer = cv2.VideoWriter(str(OUTPUT_PATH), fourcc, 30.0, (width, height))
+        for img_file in frame_files:
+            frame = cv2.imread(str(img_file))
+            if frame is None:
+                continue
+            # Single-frame inference and drawing
+            inp = preprocess(frame)
+            pred = single_sess.run(None, {'input_image': inp[None, ...]})[0][0]
+            x1, y1, x2, y2 = bbox_to_pixels(pred, width, height)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            # Temporal inference if available
+            if temporal_sess:
+                seq_buffer.append(inp)
+                if len(seq_buffer) == seq_len:
+                    pred_t = temporal_sess.run(None, {'input_sequence': np.stack(seq_buffer)[None, ...]})[0][0]
+                    tx1, ty1, tx2, ty2 = bbox_to_pixels(pred_t, width, height)
+                    cv2.rectangle(frame, (tx1, ty1), (tx2, ty2), (0, 0, 255), 2)
+            writer.write(frame)
+        writer.release()
+        print(f"Saved annotated video to {OUTPUT_PATH}")
+        return
     else:
+        # Single image inference
         frame = cv2.imread(str(input_path))
         if frame is None:
             print(f"Error: Could not load image {input_path}")
             return
         height, width = frame.shape[:2]
-
-    seq_buffer = deque(maxlen=seq_len)
-    font = cv2.FONT_HERSHEY_SIMPLEX # Define font for text
 
     while True:
         if is_video:
