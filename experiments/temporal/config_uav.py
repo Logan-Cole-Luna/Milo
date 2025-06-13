@@ -4,7 +4,7 @@ Configuration for UAV detection training (train_uav_detector.py).
 import torch
 
 # --- General Settings ---
-EXPERIMENT_NAME_BASE = "overfit_uav_detection_v3"
+EXPERIMENT_NAME_BASE = "uav_detection_v3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # --- Data Settings ---
@@ -12,7 +12,7 @@ DATA_ROOT = r"C:\data\processed_anti_uav_v2"
 TRAIN_SUBSET_FRACTION = 0.7
 
 # --- Training Hyperparameters (Global defaults, can be overridden in EXPERIMENT_CONFIGURATIONS) ---
-BATCH_SIZE = 128
+BATCH_SIZE = 64
 EPOCHS = 50
 LEARNING_RATE = 1e-4
 
@@ -25,7 +25,7 @@ OVERFIT = False
 OVERFIT_N_SAMPLES = 32
 
 # --- Dataloader Settings (Global defaults) ---
-NUM_WORKERS = 8
+NUM_WORKERS = 0
 PIN_MEMORY = False  # Disabled to prevent CUDA resource mapping errors on Windows
 PERSISTENT_WORKERS = False  # Disabled to avoid issues with worker threads holding resources
 PREFETCH_FACTOR = 4

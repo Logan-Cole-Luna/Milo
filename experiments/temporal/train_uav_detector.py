@@ -421,14 +421,20 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
     # DataLoaders - use current_batch_size
     loader_kwargs = dict(
         num_workers=C.NUM_WORKERS, pin_memory=C.PIN_MEMORY,
-        persistent_workers=C.PERSISTENT_WORKERS, prefetch_factor=C.PREFETCH_FACTOR
+        persistent_workers=C.PERSISTENT_WORKERS # Removed prefetch_factor from here
     )
+    if C.NUM_WORKERS > 0:
+        loader_kwargs['prefetch_factor'] = C.PREFETCH_FACTOR
+        
     # Increase train batch size (up to 2x) to better fill GPU
     train_bs = min(len(train_ds), current_batch_size)
     train_loader = DataLoader(train_ds, shuffle=True, batch_size=train_bs, **loader_kwargs)
 
     val_bs = min(len(val_ds), current_batch_size)
     val_loader = DataLoader(val_ds, shuffle=False, batch_size=val_bs, **loader_kwargs)
+    
+    test_bs = min(len(test_ds), current_batch_size * 2)
+    test_loader_final = DataLoader(test_ds, shuffle=False, batch_size=test_bs, **loader_kwargs) 
 
     # Model - use current_model_type, current_model_architecture, and current_seq_len
     if current_model_type == "temporal":
@@ -477,7 +483,7 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
     #    validate_every_n_epochs = 1
 
     for epoch in range(1, current_epochs + 1):
-        print(f"\\nEpoch {epoch}/{current_epochs} for {optimizer_name} ({current_config_name})")
+        print(f"\nEpoch {epoch}/{current_epochs} for {optimizer_name} ({current_config_name})")
         
         train_epoch_results = run_epoch(model, train_loader, optimizer, scaler, device, "Train",
                                         criterion_l1, bbox_iou, scheduler, current_overfit_active, current_model_type)
@@ -487,7 +493,7 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
         all_iter_costs_for_run.extend(train_epoch_results["iter_costs"])
         all_batch_times_for_run.extend(train_epoch_results["batch_times"])
 
-        if epoch % validate_every_n_epochs == 0 or epoch == current_epochs:
+        if epoch % validate_every_n_epochs == 0:
             val_metrics_epoch = run_epoch(model, val_loader, None, scaler, device, "Val",
                                           criterion_l1, bbox_iou, None, current_overfit_active, current_model_type)
             history_val_loss_steps.append(val_metrics_epoch["loss"])
@@ -499,10 +505,43 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
             if val_metrics_epoch["iou"] > best_val_iou: # Assuming best model is still based on IoU
                 best_val_iou = val_metrics_epoch["iou"]
                 print(f"  ↑ New best validation IoU: {best_val_iou:.4f}")
-                # Save checkpoint for best model
-                checkpoint_path = checkpoints_dir / f"model_{current_config_name}_{optimizer_name}_epoch{epoch}_valiou{best_val_iou:.4f}.pth"
-                torch.save(model.state_dict(), checkpoint_path)
-                print(f"    Checkpoint saved to {checkpoint_path}")
+                # Save PyTorch checkpoint
+                checkpoint_pth_path = checkpoints_dir / f"model_{current_config_name}_{optimizer_name}_epoch{epoch}_valiou{best_val_iou:.4f}.pth"
+                torch.save(model.state_dict(), checkpoint_pth_path)
+                print(f"    PyTorch Checkpoint saved to {checkpoint_pth_path}")
+
+                # Save ONNX checkpoint
+                onnx_checkpoint_filename = f"model_{current_config_name}_{optimizer_name}_epoch{epoch}_valiou{best_val_iou:.4f}.onnx"
+                onnx_checkpoint_path = checkpoints_dir / onnx_checkpoint_filename
+                try:
+                    model.eval() # Ensure model is in eval mode for ONNX export
+                    if current_model_type == "temporal":
+                        dummy_input = torch.randn(1, current_seq_len, 3, 224, 224, device=device)
+                        input_names = ['input_sequence']
+                        output_names = ['output_bbox']
+                        dynamic_axes={'input_sequence': {0: 'batch_size', 1: 'sequence_length'}, 'output_bbox': {0: 'batch_size'}}
+                    else: # single_frame
+                        dummy_input = torch.randn(1, 3, 224, 224, device=device)
+                        input_names = ['input_image']
+                        output_names = ['output_bbox']
+                        dynamic_axes={'input_image': {0: 'batch_size'}, 'output_bbox': {0: 'batch_size'}}
+
+                    torch.onnx.export(model,
+                                      dummy_input,
+                                      str(onnx_checkpoint_path),
+                                      export_params=True,
+                                      opset_version=11, 
+                                      do_constant_folding=True,
+                                      input_names=input_names,
+                                      output_names=output_names,
+                                      dynamic_axes=dynamic_axes
+                                     )
+                    print(f"    ONNX Checkpoint saved to: {onnx_checkpoint_path}")
+                except Exception as e:
+                    print(f"    [WARN] Failed to save ONNX checkpoint: {e}")
+                # Restore model to train mode if it was training before (run_epoch handles this for the main loop)
+                # However, since this is inside the validation block, model should be in eval.
+                # If further training epochs follow, model.train() will be called by run_epoch.
             
             if C.VISUALIZATION_SAMPLES > 0:
                 # base_visuals_dir is already config_results_dir/visuals. We need to create a sub-folder for the optimizer within it for these viz
@@ -516,8 +555,6 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
         
     # --- Final Test Evaluation ---
     print(f"\n[INFO] Preparing for final test run for {optimizer_name} ({current_config_name})...")
-    test_bs = min(len(test_ds), current_batch_size * 2)
-    test_loader_final = DataLoader(test_ds, shuffle=False, batch_size=test_bs, **loader_kwargs) 
     
     test_eval_start_time = time.time()
     test_metrics_final = run_epoch(model, test_loader_final, None, scaler, device, "Test",
