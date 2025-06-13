@@ -9,6 +9,8 @@ import torch
 from torch.utils.data import Dataset
 import cv2 # For cv2.imread and cv2.cvtColor
 
+IMAGE_EXTS = [".jpg", ".jpeg", ".png"]  # Add other image extensions if needed
+
 class FrameBBOXDataset(Dataset):
     """
     A PyTorch Dataset for loading frame-level or temporal sequences of UAV images
@@ -63,6 +65,28 @@ class FrameBBOXDataset(Dataset):
         else:
             print(f"[INFO] Dataset '{split}': Found {len(valid_label_files)} non-empty label files to consider.")
 
+        if valid_label_files and load_n_samples is not None and not self.is_temporal:
+            print(f"[INFO] Dataset '{split}': Directly sampling first {load_n_samples} valid labeled frames.")
+            for stem, lbl_p in list(valid_label_files.items())[:load_n_samples]:
+                img_p = None
+                for ext in IMAGE_EXTS:
+                    candidate = self.img_dir / f"{stem}{ext}"
+                    if candidate.exists():
+                        img_p = candidate
+                        break
+                if not img_p:
+                    continue
+                try:
+                    contents = lbl_p.read_text().split()
+                    if len(contents) == 5:
+                        bbox = torch.tensor(list(map(float, contents[1:])), dtype=torch.float32)
+                        self.samples.append((img_p, bbox))
+                except Exception:
+                    continue
+            if self.samples:
+                print(f"[INFO] Dataset '{split}': Loaded {len(self.samples)} samples via direct sampling.")
+                return
+        
         print(f"[INFO] Dataset '{split}': Globbing images from {self.img_dir}...")
         all_potential_image_paths = sorted(self.img_dir.glob("*.jpg"))
 
@@ -134,6 +158,52 @@ class FrameBBOXDataset(Dataset):
                 
                 if (i + 1) % 10000 == 0 and len(paths_to_check) > 20000 :
                     print(f"[INFO] Dataset '{split}': Iterated {i+1}/{len(paths_to_check)} potential image files. Found {len(self.samples)} valid samples so far.")
+
+        # If no samples found and we limited by load_n_samples, retry full dataset
+        if not self.samples and load_n_samples is not None and valid_label_files:
+            print(f"[WARN] Dataset '{split}': No samples found within first {len(paths_to_check)} files; retrying full dataset scan.")
+            for i, current_img_p in enumerate(all_potential_image_paths):
+                # reuse original temporal vs single logic
+                if self.is_temporal:
+                    # (same as above) build frame_sequence_paths and check labels
+                    current_idx_in_all_paths = i
+                    if current_idx_in_all_paths < self.seq_len - 1:
+                        continue
+                    try:
+                        actual_current_idx = all_potential_image_paths.index(current_img_p)
+                    except ValueError:
+                        continue
+                    if actual_current_idx < self.seq_len - 1:
+                        continue
+                    start_idx = actual_current_idx - self.seq_len + 1
+                    frame_sequence_paths = all_potential_image_paths[start_idx : actual_current_idx + 1]
+                    expected_prefix = "_".join(frame_sequence_paths[-1].stem.split('_')[:-1])
+                    if not all(p.stem.startswith(expected_prefix) for p in frame_sequence_paths):
+                        continue
+                    last_frame_stem = frame_sequence_paths[-1].stem
+                    if last_frame_stem in valid_label_files:
+                        lbl_p_current = valid_label_files[last_frame_stem]
+                        try:
+                            contents = lbl_p_current.read_text().split()
+                            if len(contents) == 5:
+                                bbox_current = torch.tensor(list(map(float, contents[1:])), dtype=torch.float32)
+                                self.samples.append((frame_sequence_paths, bbox_current))
+                        except Exception:
+                            pass
+                else:
+                    img_stem = current_img_p.stem
+                    if img_stem in valid_label_files:
+                        lbl_p = valid_label_files[img_stem]
+                        try:
+                            contents = lbl_p.read_text().split()
+                            if len(contents) == 5:
+                                _, cx, cy, w, h = map(float, contents)
+                                bbox = torch.tensor([cx, cy, w, h], dtype=torch.float32)
+                                self.samples.append((current_img_p, bbox))
+                        except ValueError:
+                            pass
+            if self.samples:
+                print(f"[INFO] Dataset '{split}': Loaded {len(self.samples)} samples after full dataset scan.")
 
         if not self.samples:
             reason = "no non-empty label files were found" if not valid_label_files else f"no images with corresponding valid labels were found among the {len(paths_to_check)} images checked"

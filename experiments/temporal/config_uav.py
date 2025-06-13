@@ -4,15 +4,15 @@ Configuration for UAV detection training (train_uav_detector.py).
 import torch
 
 # --- General Settings ---
-EXPERIMENT_NAME_BASE = "uav_detection_exp"
+EXPERIMENT_NAME_BASE = "overfit_uav_detection_v3"
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 # --- Data Settings ---
-DATA_ROOT = "C:/data/processed_anti_uav"
-TRAIN_SUBSET_FRACTION = 0.5
+DATA_ROOT = r"C:\data\processed_anti_uav_v2"
+TRAIN_SUBSET_FRACTION = 0.7
 
 # --- Training Hyperparameters (Global defaults, can be overridden in EXPERIMENT_CONFIGURATIONS) ---
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 EPOCHS = 50
 LEARNING_RATE = 1e-4
 
@@ -21,13 +21,13 @@ VALIDATE_EVERY_EPOCH_FACTOR = 0.2 # Validate every 20% of epochs (e.g., every 10
 VISUALIZATION_SAMPLES = 5 # Number of samples to visualize
 
 # --- Overfitting Settings (Global defaults, can be overridden) ---
-OVERFIT = False
+OVERFIT = False 
 OVERFIT_N_SAMPLES = 32
 
 # --- Dataloader Settings (Global defaults) ---
 NUM_WORKERS = 8
-PIN_MEMORY = True
-PERSISTENT_WORKERS = True
+PIN_MEMORY = False  # Disabled to prevent CUDA resource mapping errors on Windows
+PERSISTENT_WORKERS = False  # Disabled to avoid issues with worker threads holding resources
 PREFETCH_FACTOR = 4
 
 # --- Results Directory ---
@@ -45,18 +45,35 @@ IOU_PLOT_TITLE = "IoU vs. Epoch (UAV Detection)"
 LOSS_PLOT_YLABEL = "Average Loss"
 IOU_PLOT_YLABEL = "Average IoU"
 
-# --- NEW: Experiment Configurations ---
+# --- Experiment Configurations ---
 EXPERIMENT_CONFIGURATIONS = [
     {
-        "name": "single_frame_default",
+        "name": "single_frame_default_resnet18",
         "MODEL_TYPE": "single_frame",
+        "MODEL_ARCHITECTURE": "resnet18",
         "SEQ_LEN": 1,
     },
     {
-        "name": "temporal_s5_default",
+        "name": "temporal_s5_default_resnet18",
         "MODEL_TYPE": "temporal",
+        "MODEL_ARCHITECTURE": "resnet18",
         "SEQ_LEN": 5,
     },
+    #{
+    #    "name": "single_frame_resnet18",
+    #    "MODEL_TYPE": "single_frame",
+    #    "MODEL_ARCHITECTURE": "resnet18",
+    #    "SEQ_LEN": 1,
+    #    "BATCH_SIZE": 64, # Example: Can still override other params
+    #    "EPOCHS": 30
+    #},
+    #{
+    #    "name": "temporal_s3_resnet18",
+    #    "MODEL_TYPE": "temporal",
+    #    "MODEL_ARCHITECTURE": "resnet18",
+    #    "SEQ_LEN": 3,
+    #    "EPOCHS": 20, # Example
+    #},
     # Add more configurations as needed:
     # {
     #     "name": "temporal_s3_fast_run",

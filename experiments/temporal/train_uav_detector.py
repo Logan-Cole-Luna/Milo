@@ -27,9 +27,12 @@ import cv2
 import random
 import time
 import json
+import functools # Add functools import
 from torch.amp import autocast, GradScaler
+from contextlib import nullcontext
 from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import models
+import torch.onnx # Add ONNX import
 from tqdm import tqdm
 import numpy as np # For averaging metrics
 import pandas as pd # For saving metrics to CSV
@@ -42,18 +45,21 @@ project_root = Path(__file__).resolve().parents[2] # Assuming train_uav_detector
 sys.path.append(str(project_root))
 
 # Import models from network.py (assuming it's in the same directory or accessible via PYTHONPATH)
-from network import ResNet50Regressor, TemporalResNet50Regressor # This is from temporal/network.py
-import experiments.temporal.config_uav as C
+from network import SingleFrameResNetRegressor, TemporalResNetRegressor # Updated class names
 
 # Local imports from the current 'temporal' package
+import config_uav as C
 from uav_dataset import FrameBBOXDataset
 from uav_metrics import bbox_iou
 
-# Imports from the \'experiments\' module
+# Imports from the \\'experiments\\' module
 from experiments.train_utils import get_layer_names # evaluate_model might need adaptation for regression
 from experiments.experiment_runner import run_experiments # This will be the main driver
 from experiments.plotting import plot_seaborn_style_with_error_bars, setup_plot_style, plot_resource_usage
 from experiments.utils.resource_tracker import ResourceTracker, save_resource_info # Optional resource tracking
+
+# --- IoU Threshold for F1 Score Calculation ---
+IOU_THRESHOLD_F1 = 0.5
 
 # --- Setup Visualization Style (from supervised_learning_experiment.py) ---
 setup_plot_style() # Applies seaborn styling etc.
@@ -82,7 +88,8 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
 # Ensure deterministic behavior where possible
 torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False # Benchmark can be True if input sizes don't change, for speed
+# Enable cuDNN autotuner to find optimal algorithms for fixed input sizes
+torch.backends.cudnn.benchmark = True
 
 # ─────────────────────────────── Dataset ──────────────────────────────────────
 # The FrameBBOXDataset class has been moved to uav_dataset.py
@@ -114,70 +121,105 @@ def run_epoch(model, loader, optimizer, scaler, device, stage,
 
     Returns:
         dict: A dictionary containing metrics for the epoch.
-              For training: {"loss": avg_loss, "iou": avg_iou, 
+              For training: {"loss": avg_loss, "iou": avg_iou, "f1": avg_f1,
                              "iter_costs": per_batch_losses, 
                              "batch_times": per_batch_processing_times}
-              For validation/test: {"loss": avg_loss, "iou": avg_iou}
+              For validation/test: {"loss": avg_loss, "iou": avg_iou, "f1": avg_f1}
     """
     training = (stage == "Train")
-    if training:
-        model.train()
-    else:
-        model.eval()
+    # Use no_grad in evaluation to skip CPU graph overhead
+    grad_ctx = torch.enable_grad() if training else torch.no_grad()
+    model.train(training) # Set model mode
 
     total_loss = 0.0
     total_iou  = 0.0
-    n = 0
+    epoch_tp = 0
+    epoch_fp = 0
+    epoch_fn = 0
+    n_samples_processed = 0 # Total samples processed to correctly average IoU and Loss
+
     iter_costs_epoch = [] # Collect per-batch losses for training
     batch_times_epoch = [] # Collect per-batch processing times for training
 
     pbar = tqdm(loader, desc=stage, leave=False)
-    for batch_idx, (inputs, targets) in enumerate(pbar):
-        batch_start_time = time.time() # Start time for batch processing
+    with grad_ctx:
+        for batch_idx, batch_data in enumerate(pbar):
+            start_time_batch = time.time()
 
-        inputs = inputs.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+            if model_type == "temporal":
+                # Assuming batch_data is (sequences, targets_bbox)
+                # sequences shape: (batch, seq_len, C, H, W), targets_bbox shape: (batch, 4)
+                inputs, targets_bbox = batch_data
+                inputs = inputs.to(device, non_blocking=True)
+                targets_bbox = targets_bbox.to(device, non_blocking=True)
+            else: # single_frame
+                # Assuming batch_data is (images, targets_bbox)
+                # images shape: (batch, C, H, W), targets_bbox shape: (batch, 4)
+                inputs, targets_bbox = batch_data
+                inputs = inputs.to(device, non_blocking=True)
+                targets_bbox = targets_bbox.to(device, non_blocking=True)
 
-        with autocast(device_type=device.type, enabled=scaler.is_enabled()):
-            preds = model(inputs) 
-            loss_l1 = criterion_l1(preds, targets)
-            loss_iou_val = criterion_iou(preds, targets) 
-            loss_iou = 1.0 - loss_iou_val.mean() 
-            loss = loss_l1 + loss_iou
-        
-        if training:
-            optimizer.zero_grad(set_to_none=True)
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            iter_costs_epoch.append(loss.item()) # Store loss for this iteration
-        
-        batch_end_time = time.time() # End time for batch processing
-        if training: # Only record batch times during training for walltime plots
-            batch_times_epoch.append(batch_end_time - batch_start_time)
+            current_batch_size = inputs.size(0)
 
-        batch_size = inputs.size(0)
-        total_loss += loss.item() * batch_size
-        
-        iou_metric_val = criterion_iou(preds.detach(), targets.detach()).mean().item()
-        total_iou += iou_metric_val * batch_size 
-        n += batch_size
-        
-        pbar.set_postfix(loss=f"{loss.item():.4f}", iou=f"{iou_metric_val:.4f}")
-        
-        if overfit and batch_idx >= 0: 
-            pass 
+            with autocast(device_type=device.type, enabled=scaler.is_enabled()):
+                outputs = model(inputs) # Predicted bounding boxes
+                loss_l1 = criterion_l1(outputs, targets_bbox)
+                
+                # Calculate IoU - criterion_iou is expected to be bbox_iou directly
+                # It should return a tensor of IoU values for the batch, shape (batch_size,)
+                iou_scores_for_batch = criterion_iou(outputs, targets_bbox) 
+                
+                # Ensure iou_scores_for_batch is a tensor, handle potential scalar return for batch_size=1
+                if not isinstance(iou_scores_for_batch, torch.Tensor):
+                    iou_scores_for_batch = torch.tensor([iou_scores_for_batch], device=outputs.device)
+                elif iou_scores_for_batch.ndim == 0: # If it's a scalar tensor
+                    iou_scores_for_batch = iou_scores_for_batch.unsqueeze(0)
+
+                batch_iou_loss = (1.0 - iou_scores_for_batch).mean() # Loss is 1 - IoU
+                total_combined_loss = loss_l1 + batch_iou_loss # Example: combine losses
+
+            if training:
+                optimizer.zero_grad(set_to_none=True)
+                scaler.scale(total_combined_loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                iter_costs_epoch.append(total_combined_loss.item())
+                batch_times_epoch.append(time.time() - start_time_batch)
+
+            total_loss += total_combined_loss.item() * current_batch_size
+            total_iou  += iou_scores_for_batch.sum().item() # Sum of IoUs in the batch
+            n_samples_processed += current_batch_size
+            
+            # F1 Score calculation parts
+            tp_batch = (iou_scores_for_batch >= IOU_THRESHOLD_F1).sum().item()
+            # For each item in the batch, if IoU < threshold, it's both a False Positive (bad prediction)
+            # and a False Negative (ground truth not found accurately)
+            # This assumes one prediction per ground truth.
+            fp_batch = (iou_scores_for_batch < IOU_THRESHOLD_F1).sum().item()
+            fn_batch = (iou_scores_for_batch < IOU_THRESHOLD_F1).sum().item()
+            
+            epoch_tp += tp_batch
+            epoch_fp += fp_batch
+            epoch_fn += fn_batch
+
+            pbar.set_postfix(loss=f"{total_combined_loss.item():.4f}", iou=f"{iou_scores_for_batch.mean().item():.4f}")
 
     if training and scheduler and not overfit:
         scheduler.step()
 
-    avg_loss = total_loss / n if n > 0 else 0.0
-    avg_iou  = total_iou / n if n > 0 else 0.0
+    avg_loss = total_loss / n_samples_processed if n_samples_processed > 0 else 0.0
+    avg_iou  = total_iou / n_samples_processed if n_samples_processed > 0 else 0.0
+    
+    # Calculate epoch-level F1 score
+    precision_epoch = epoch_tp / (epoch_tp + epoch_fp) if (epoch_tp + epoch_fp) > 0 else 0.0
+    recall_epoch = epoch_tp / (epoch_tp + epoch_fn) if (epoch_tp + epoch_fn) > 0 else 0.0
+    avg_f1_epoch = 2 * (precision_epoch * recall_epoch) / (precision_epoch + recall_epoch) if (precision_epoch + recall_epoch) > 0 else 0.0
     
     if training:
-        return {"loss": avg_loss, "iou": avg_iou, "iter_costs": iter_costs_epoch, "batch_times": batch_times_epoch}
+        return {"loss": avg_loss, "iou": avg_iou, "f1": avg_f1_epoch,
+                "iter_costs": iter_costs_epoch, "batch_times": batch_times_epoch}
     else:
-        return {"loss": avg_loss, "iou": avg_iou}
+        return {"loss": avg_loss, "iou": avg_iou, "f1": avg_f1_epoch}
 
 
 def visualize_samples(model, data_root, split, exp_dir, n, device, transform_to_apply,
@@ -296,7 +338,7 @@ def visualize_samples(model, data_root, split, exp_dir, n, device, transform_to_
         py1 = int((py_norm - ph_norm / 2) * h_img)
         px2 = int((px_norm + pw_norm / 2) * w_img)
         py2 = int((py_norm + ph_norm / 2) * h_img)
-        cv2.rectangle(im_bgr, (px1, py1), (px2, py2), (0, 255, 0), 2) # Green for prediction
+        cv2.rectangle(im_bgr, (px1, py1), (px2, py2), (0, 0, 255), 2) # Red for prediction
 
         if lbl_p_ground_truth.exists() and lbl_p_ground_truth.stat().st_size > 0:
             try:
@@ -320,7 +362,7 @@ def visualize_samples(model, data_root, split, exp_dir, n, device, transform_to_
                             gy1 = int((gty_norm - gth_norm / 2) * h_img)
                             gx2 = int((gtx_norm + gtw_norm / 2) * w_img)
                             gy2 = int((gty_norm + gth_norm / 2) * h_img)
-                            cv2.rectangle(im_bgr, (gx1, gy1), (gx2, gy2), (0, 0, 255), 2) # Red for ground truth
+                            cv2.rectangle(im_bgr, (gx1, gy1), (gx2, gy2), (0, 255, 0), 2) # Green for actual
             except Exception as e:
                 print(f"[WARN] Viz: Error parsing or drawing GT for label file {lbl_p_ground_truth}: {e}")
         
@@ -330,9 +372,9 @@ def visualize_samples(model, data_root, split, exp_dir, n, device, transform_to_
 
 # ─── Wrapper for experiment_runner compatibility (New Function) ───────────────
 def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, val_ds, test_ds,
-                                   # New parameters for current configuration
-                                   current_config_name, current_model_type, current_seq_len,
-                                   current_batch_size, current_epochs, current_lr,
+                                   current_config_name, current_model_type, current_model_architecture,
+                                   current_seq_len, current_batch_size, current_epochs, current_lr,
+                                   current_overfit_active=False, current_overfit_n_samples=0,
                                    return_settings=False):
     """
     Runs a single iteration of the UAV detection training experiment for a given optimizer
@@ -350,12 +392,15 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
         train_ds (Dataset): Pre-loaded training dataset (potentially filtered for overfit).
         val_ds (Dataset): Pre-loaded validation dataset (potentially filtered for overfit).
         test_ds (Dataset): Pre-loaded test dataset (potentially filtered for overfit).
-        current_config_name (str): Name of the current experiment configuration (e.g., \"single_frame_default\").
-        current_model_type (str): Model type for this run (\"single_frame\" or \"temporal\").
+        current_config_name (str): Name of the current experiment configuration (e.g., \\\"single_frame_default\\\").
+        current_model_type (str): Model type for this run (\\\"single_frame\\\" or \\\"temporal\\\").
+        current_model_architecture (str): ResNet architecture for this run (e.g., \\\"resnet18\\\", \\\"resnet50\\\").
         current_seq_len (int): Sequence length for this run.
         current_batch_size (int): Batch size for this run.
         current_epochs (int): Number of epochs for this run.
         current_lr (float): Learning rate for this run.
+        current_overfit_active (bool): If True, enables overfitting mode for this iteration.
+        current_overfit_n_samples (int): Number of samples to use for overfitting, if active.
         return_settings (bool): If True, also returns a dictionary of settings specific
                                 to this iteration (e.g., optimizer parameters).
                                 This is used by `experiment_runner`.
@@ -368,38 +413,45 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
                 test_metrics, steps_per_epoch_h, train_metrics_hist)
                If `return_settings` is True, an additional settings dictionary is appended.
                For this UAV task, 'accuracy' related fields (val_accuracy_h, etc.)
-               are populated with IoU scores.
+               are populated with IoU scores. 'f1_score' is now calculated.
     """
     print(f"\n--- Starting a new run for Optimizer: {optimizer_name}, Config: {current_config_name} ---")
-    print(f"    Model: {current_model_type}, SeqLen: {current_seq_len}, Batch: {current_batch_size}, Epochs: {current_epochs}, LR: {current_lr}")
+    print(f"    Model Type: {current_model_type}, Architecture: {current_model_architecture}, SeqLen: {current_seq_len}, Batch: {current_batch_size}, Epochs: {current_epochs}, LR: {current_lr}")
 
     # DataLoaders - use current_batch_size
     loader_kwargs = dict(
-        batch_size=current_batch_size, num_workers=C.NUM_WORKERS, pin_memory=C.PIN_MEMORY,
+        num_workers=C.NUM_WORKERS, pin_memory=C.PIN_MEMORY,
         persistent_workers=C.PERSISTENT_WORKERS, prefetch_factor=C.PREFETCH_FACTOR
     )
-    train_loader = DataLoader(train_ds, shuffle=True,  **loader_kwargs)
-    val_loader   = DataLoader(val_ds,   shuffle=False, **loader_kwargs)
+    # Increase train batch size (up to 2x) to better fill GPU
+    train_bs = min(len(train_ds), current_batch_size)
+    train_loader = DataLoader(train_ds, shuffle=True, batch_size=train_bs, **loader_kwargs)
 
-    # Model - use current_model_type and current_seq_len
+    val_bs = min(len(val_ds), current_batch_size)
+    val_loader = DataLoader(val_ds, shuffle=False, batch_size=val_bs, **loader_kwargs)
+
+    # Model - use current_model_type, current_model_architecture, and current_seq_len
     if current_model_type == "temporal":
-        model = TemporalResNet50Regressor(seq_len=current_seq_len, overfit=C.OVERFIT).to(device)
+        model = TemporalResNetRegressor(model_architecture=current_model_architecture,
+                                        seq_len=current_seq_len,
+                                        overfit=current_overfit_active).to(device)
     else: # single_frame
-        model = ResNet50Regressor(overfit=C.OVERFIT).to(device)
+        model = SingleFrameResNetRegressor(model_architecture=current_model_architecture,
+                                           overfit=current_overfit_active).to(device)
     
     layer_names = get_layer_names(model)
 
     criterion_l1 = nn.SmoothL1Loss()
 
     if optimizer_name.upper() == "ADAMW":
-        optimizer = optim.AdamW(model.parameters(), lr=current_lr, weight_decay=0.0 if C.OVERFIT else 1e-4)
+        optimizer = optim.AdamW(model.parameters(), lr=current_lr, weight_decay=0.0 if current_overfit_active else 1e-4)
     else:
         print(f"[WARN] Optimizer {optimizer_name} not explicitly configured, using AdamW with LR={current_lr}.")
-        optimizer = optim.AdamW(model.parameters(), lr=current_lr, weight_decay=0.0 if C.OVERFIT else 1e-4)
+        optimizer = optim.AdamW(model.parameters(), lr=current_lr, weight_decay=0.0 if current_overfit_active else 1e-4)
 
     scheduler = None
     scheduler_config = C.SCHEDULER_PARAMS.get(optimizer_name, {})
-    if not C.OVERFIT and scheduler_config.get("scheduler") == "CosineAnnealingLR":
+    if not current_overfit_active and scheduler_config.get("scheduler") == "CosineAnnealingLR":
         t_max_scheduler = scheduler_config.get("params", {}).get("T_max", current_epochs)
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=t_max_scheduler)
     
@@ -407,87 +459,138 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
 
     history_train_loss = []
     history_train_iou = []
+    history_train_f1 = [] # Added for F1
     history_val_loss_steps = [] 
     history_val_iou_steps = []
+    history_val_f1_steps = [] # Added for F1
     val_epochs_recorded = []
     all_iter_costs_for_run = [] 
     all_batch_times_for_run = []
     best_val_iou = 0.0
     
+    # Create checkpoints directory for this specific optimizer run
+    checkpoints_dir = base_visuals_dir / optimizer_name / "checkpoints"
+    checkpoints_dir.mkdir(parents=True, exist_ok=True)
+    
     validate_every_n_epochs = max(1, int(current_epochs * C.VALIDATE_EVERY_EPOCH_FACTOR))
-    if C.OVERFIT:
-        validate_every_n_epochs = 1
+    #if current_overfit_active:
+    #    validate_every_n_epochs = 1
 
     for epoch in range(1, current_epochs + 1):
-        print(f"\nEpoch {epoch}/{current_epochs} for {optimizer_name} ({current_config_name})")
+        print(f"\\nEpoch {epoch}/{current_epochs} for {optimizer_name} ({current_config_name})")
         
         train_epoch_results = run_epoch(model, train_loader, optimizer, scaler, device, "Train",
-                                        criterion_l1, bbox_iou, scheduler, C.OVERFIT, current_model_type)
+                                        criterion_l1, bbox_iou, scheduler, current_overfit_active, current_model_type)
         history_train_loss.append(train_epoch_results["loss"])
         history_train_iou.append(train_epoch_results["iou"])
+        history_train_f1.append(train_epoch_results["f1"]) # Store F1
         all_iter_costs_for_run.extend(train_epoch_results["iter_costs"])
         all_batch_times_for_run.extend(train_epoch_results["batch_times"])
 
         if epoch % validate_every_n_epochs == 0 or epoch == current_epochs:
             val_metrics_epoch = run_epoch(model, val_loader, None, scaler, device, "Val",
-                                          criterion_l1, bbox_iou, None, C.OVERFIT, current_model_type)
+                                          criterion_l1, bbox_iou, None, current_overfit_active, current_model_type)
             history_val_loss_steps.append(val_metrics_epoch["loss"])
             history_val_iou_steps.append(val_metrics_epoch["iou"])
+            history_val_f1_steps.append(val_metrics_epoch["f1"]) # Store F1
             val_epochs_recorded.append(epoch)
-            print(f"  Val   → loss {val_metrics_epoch['loss']:.4f}, IoU {val_metrics_epoch['iou']:.4f}")
+            print(f"  Val   → loss {val_metrics_epoch['loss']:.4f}, IoU {val_metrics_epoch['iou']:.4f}, F1 {val_metrics_epoch['f1']:.4f}")
 
-            if val_metrics_epoch["iou"] > best_val_iou:
+            if val_metrics_epoch["iou"] > best_val_iou: # Assuming best model is still based on IoU
                 best_val_iou = val_metrics_epoch["iou"]
                 print(f"  ↑ New best validation IoU: {best_val_iou:.4f}")
+                # Save checkpoint for best model
+                checkpoint_path = checkpoints_dir / f"model_{current_config_name}_{optimizer_name}_epoch{epoch}_valiou{best_val_iou:.4f}.pth"
+                torch.save(model.state_dict(), checkpoint_path)
+                print(f"    Checkpoint saved to {checkpoint_path}")
             
             if C.VISUALIZATION_SAMPLES > 0:
-                # base_visuals_dir is already config_visuals_dir from the main loop
-                # We need to create a sub-folder for the optimizer within it for these viz
-                viz_exp_dir_optimizer_specific = base_visuals_dir / optimizer_name 
+                # base_visuals_dir is already config_results_dir/visuals. We need to create a sub-folder for the optimizer within it for these viz
+                viz_exp_dir_optimizer_specific = base_visuals_dir / optimizer_name
                 out_subdir_viz = f"val_epoch_{epoch}" if epoch < current_epochs else f"val_final"
-                visualize_samples(model, C.DATA_ROOT, "val", viz_exp_dir_optimizer_specific, C.VISUALIZATION_SAMPLES, device, val_tf,
-                                  is_overfit_visualization=C.OVERFIT,
-                                  overfit_pool_size=C.OVERFIT_N_SAMPLES if C.OVERFIT else 0,
+                visualize_samples(model, C.DATA_ROOT, "train" if current_overfit_active else "val", viz_exp_dir_optimizer_specific, C.VISUALIZATION_SAMPLES, device, val_tf,
+                                  is_overfit_visualization=current_overfit_active,
+                                  overfit_pool_size=current_overfit_n_samples if current_overfit_active else 0,
                                   model_type=current_model_type, seq_len=current_seq_len,
                                   out_subdir=out_subdir_viz)
         
     # --- Final Test Evaluation ---
     print(f"\n[INFO] Preparing for final test run for {optimizer_name} ({current_config_name})...")
-    test_loader_final = DataLoader(test_ds, shuffle=False, **loader_kwargs) 
+    test_bs = min(len(test_ds), current_batch_size * 2)
+    test_loader_final = DataLoader(test_ds, shuffle=False, batch_size=test_bs, **loader_kwargs) 
     
     test_eval_start_time = time.time()
     test_metrics_final = run_epoch(model, test_loader_final, None, scaler, device, "Test",
                                    criterion_l1, bbox_iou, None, C.OVERFIT, current_model_type)
     test_eval_time = time.time() - test_eval_start_time
-    print(f"  Test  → loss {test_metrics_final['loss']:.4f}, IoU {test_metrics_final['iou']:.4f}, Eval time: {test_eval_time:.2f}s")
+    print(f"  Test  → loss {test_metrics_final['loss']:.4f}, IoU {test_metrics_final['iou']:.4f}, F1 {test_metrics_final['f1']:.4f}, Eval time: {test_eval_time:.2f}s")
+
+    # --- Save ONNX Model ---
+    # base_visuals_dir is effectively config_results_dir/visuals. We want to save ONNX in config_results_dir/optimizer_name/
+    onnx_save_dir = base_visuals_dir.parent / optimizer_name 
+    onnx_save_dir.mkdir(parents=True, exist_ok=True)
+    onnx_filename = f"{current_config_name}_{optimizer_name}_model.onnx"
+    onnx_path = onnx_save_dir / onnx_filename
+
+    try:
+        model.eval() # Ensure model is in eval mode
+        # Create dummy input based on model type
+        if current_model_type == "temporal":
+            dummy_input = torch.randn(1, current_seq_len, 3, 224, 224, device=device)
+            input_names = ['input_sequence']
+            output_names = ['output_bbox']
+        else: # single_frame
+            dummy_input = torch.randn(1, 3, 224, 224, device=device)
+            input_names = ['input_image']
+            output_names = ['output_bbox']
+
+        torch.onnx.export(model,
+                          dummy_input,
+                          str(onnx_path),
+                          export_params=True,
+                          opset_version=11, # Or a version compatible with your target environment
+                          do_constant_folding=True,
+                          input_names=input_names,
+                          output_names=output_names,
+                          dynamic_axes={'input_sequence': {0: 'batch_size', 1: 'sequence_length'}, # if temporal
+                                        'input_image': {0: 'batch_size'}, # if single_frame
+                                        'output_bbox': {0: 'batch_size'}} if current_model_type == "temporal" else \
+                                       {'input_image': {0: 'batch_size'},
+                                        'output_bbox': {0: 'batch_size'}}
+                         )
+        print(f"  [INFO] ONNX model saved to: {onnx_path}")
+    except Exception as e:
+        print(f"  [WARN] Failed to save ONNX model: {e}")
+
 
     if C.VISUALIZATION_SAMPLES > 0:
-        viz_split_final = "train" if C.OVERFIT else "test"
+        viz_split_final = "train" if current_overfit_active else "test"
         viz_exp_dir_test_optimizer_specific = base_visuals_dir / optimizer_name
         out_subdir_test_viz = f"test_final"
         visualize_samples(model, C.DATA_ROOT, viz_split_final, viz_exp_dir_test_optimizer_specific, C.VISUALIZATION_SAMPLES, device, val_tf,
-                          is_overfit_visualization=C.OVERFIT,
-                          overfit_pool_size=C.OVERFIT_N_SAMPLES if C.OVERFIT else 0,
+                          is_overfit_visualization=current_overfit_active,
+                          overfit_pool_size=current_overfit_n_samples if current_overfit_active else 0,
                           model_type=current_model_type, seq_len=current_seq_len,
                           out_subdir=out_subdir_test_viz)
     
     val_loss_h = history_val_loss_steps
     val_iou_h = history_val_iou_steps 
-    val_f1_h = [0.0] * len(history_val_iou_steps) 
-    val_auc_h = [0.0] * len(history_val_iou_steps)
+    val_f1_h = history_val_f1_steps # Use stored F1
+    val_auc_h = [0.0] * len(history_val_iou_steps) # AUC remains 0.0
     iter_costs_h = all_iter_costs_for_run
     cumulative_batch_times_h = list(np.cumsum(all_batch_times_for_run))
     grad_norms_h = {} 
     layer_names_h = layer_names
     test_metrics_for_runner = {
         'loss': test_metrics_final['loss'], 'accuracy': test_metrics_final['iou'], 
-        'f1_score': 0.0, 'auc': 0.0, 'eval_time_seconds': test_eval_time
+        'f1_score': test_metrics_final['f1'], 'auc': 0.0, # Use stored F1, AUC remains 0.0
+        'eval_time_seconds': test_eval_time
     }
     steps_per_epoch_h = len(train_loader)
     train_metrics_hist_adapted = {
         'epoch': list(range(1, current_epochs + 1)), 'train_loss': history_train_loss,
-        'train_iou': history_train_iou, 'train_accuracy': history_train_iou, 
-        'train_f1_score': [0.0] * len(history_train_iou), 'train_auc': [0.0] * len(history_train_iou)
+        'train_iou': history_train_iou, 'train_accuracy': history_train_iou, # accuracy is IoU
+        'train_f1_score': history_train_f1, 'train_auc': [0.0] * len(history_train_iou) # Use stored F1, AUC remains 0.0
     }
     results_tuple = (
         val_loss_h, val_iou_h, val_f1_h, val_auc_h,
@@ -498,6 +601,7 @@ def train_uav_experiment_iteration(optimizer_name, base_visuals_dir, train_ds, v
         settings_for_runner = {
             "optimizer_params": C.SCHEDULER_PARAMS.get(optimizer_name, {}),
             "config_name": current_config_name, "model_type": current_model_type,
+            "model_architecture": current_model_architecture, # Added
             "seq_len": current_seq_len, "batch_size": current_batch_size,
             "epochs": current_epochs, "learning_rate": current_lr,
         }
@@ -510,118 +614,132 @@ if __name__ == "__main__":
     print(f"[INFO] Base experiment name: {C.EXPERIMENT_NAME_BASE}")
     print(f"[INFO] Found {len(C.EXPERIMENT_CONFIGURATIONS)} experiment configurations to run.")
 
-    overall_results_root_dir = Path(C.RESULTS_BASE_DIR) / C.EXPERIMENT_NAME_BASE
-    overall_results_root_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[INFO] Base results directory: {overall_results_root_dir}")
-
-    for config_idx, config in enumerate(C.EXPERIMENT_CONFIGURATIONS):
-        config_name = config.get("name", f"config_{config_idx}")
-        print(f"\n\n{'='*80}")
-        print(f"[INFO] Running Experiment Configuration: {config_name} ({config_idx+1}/{len(C.EXPERIMENT_CONFIGURATIONS)})")
-        print(f"[INFO] Configuration details: {config}")
-        print(f"{'='*80}")
-
-        # --- Determine configuration-specific parameters ---
-        current_model_type = config.get("MODEL_TYPE")
-        current_seq_len = config.get("SEQ_LEN")
-        current_batch_size = config.get("BATCH_SIZE", C.BATCH_SIZE) # Using C.BATCH_SIZE as fallback
-        current_epochs = config.get("EPOCHS", C.EPOCHS)             # Using C.EPOCHS as fallback
-        current_lr = config.get("LEARNING_RATE", C.LEARNING_RATE) # Using C.LEARNING_RATE as fallback
-
-        if current_model_type is None or current_seq_len is None:
-            raise ValueError(f"Configuration '{config_name}' is missing 'MODEL_TYPE' or 'SEQ_LEN'. These must be defined.")
-
-        config_results_dir = overall_results_root_dir / config_name
-        config_visuals_dir = config_results_dir / "visuals"
-        config_results_dir.mkdir(parents=True, exist_ok=True)
-
-        experiment_settings_log = {
-            "experiment_group_name": C.EXPERIMENT_NAME_BASE,
-            "config_name": config_name,
-            "model_type": current_model_type,
-            "sequence_length": current_seq_len if current_model_type == "temporal" else "N/A",
-            "data_root": C.DATA_ROOT,
-            "batch_size": current_batch_size,
-            "epochs": current_epochs,
-            "learning_rate": current_lr,
-            "device": str(device),
-            "overfit_mode": C.OVERFIT,
-            "overfit_samples": C.OVERFIT_N_SAMPLES if C.OVERFIT else "N/A",
-            "train_subset_fraction": C.TRAIN_SUBSET_FRACTION if not C.OVERFIT else "N/A (Overfitting)",
-            "optimizers_tested": C.OPTIMIZERS,
-            "runs_per_optimizer": C.RUNS_PER_OPTIMIZER,
-            "date_run": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "config_details": config
-        }
-        settings_file = config_results_dir / f"{config_name}_experiment_settings.json"
-        with open(settings_file, 'w') as f:
-            json.dump(experiment_settings_log, f, indent=4)
-        print(f"[INFO] Experiment settings for '{config_name}' saved to {settings_file}")
-
-        print(f"\n[INFO] Loading datasets for configuration: {config_name} (Model: {current_model_type}, SeqLen: {current_seq_len})...")
-        dataset_kwargs_main = {
-            "root": C.DATA_ROOT,
-            "seq_len": current_seq_len,
-            "is_temporal": current_model_type == "temporal"
-        }
-
-        if C.OVERFIT:
-            train_ds_full_main = FrameBBOXDataset(split="train", transform=train_tf, load_n_samples=C.OVERFIT_N_SAMPLES, **dataset_kwargs_main)
-            num_actual_overfit_samples_main = len(train_ds_full_main)
-            overfit_indices_main = list(range(num_actual_overfit_samples_main))
-            train_ds_global = Subset(train_ds_full_main, overfit_indices_main)
-            val_test_ds_for_overfitting_main = FrameBBOXDataset(split="train", transform=val_tf, load_n_samples=C.OVERFIT_N_SAMPLES, **dataset_kwargs_main)
-            val_ds_global = Subset(val_test_ds_for_overfitting_main, overfit_indices_main)
-            test_ds_global = Subset(val_test_ds_for_overfitting_main, overfit_indices_main)
-            print(f"[INFO] Overfitting mode: Loaded {len(train_ds_global)} samples for train/val/test.")
-        else:
-            train_ds_global = FrameBBOXDataset(split="train", transform=train_tf, train_subset_fraction=C.TRAIN_SUBSET_FRACTION, **dataset_kwargs_main)
-            val_ds_global   = FrameBBOXDataset(split="val",   transform=val_tf, train_subset_fraction=1.0, **dataset_kwargs_main)
-            test_ds_global  = FrameBBOXDataset(split="test",  transform=val_tf, train_subset_fraction=1.0, **dataset_kwargs_main)
-            print(f"[INFO] Loaded datasets: Train ({len(train_ds_global)}), Val ({len(val_ds_global)}), Test ({len(test_ds_global)})." )
-        print(f"[INFO] Datasets loaded for configuration '{config_name}'.")
-
-        resource_tracker = None # Placeholder for resource tracking logic
-
-        print(f"\n[INFO] Starting experiment runs for configuration '{config_name}' via experiment_runner for optimizers: {C.OPTIMIZERS}")
+    # --- Iterate through experiment configurations defined in config_uav.py ---
+    all_configs_results = []
+    for exp_config in C.EXPERIMENT_CONFIGURATIONS:
+        config_name = exp_config["name"]
+        model_type = exp_config["MODEL_TYPE"]
+        # Get model_architecture, default to resnet50 if not specified for backward compatibility
+        model_architecture = exp_config.get("MODEL_ARCHITECTURE", "resnet50") 
+        seq_len = exp_config["SEQ_LEN"]
         
-        loss_plot_title = f"{C.LOSS_PLOT_TITLE} ({config_name})"
-        iou_plot_title = f"{C.IOU_PLOT_TITLE} ({config_name})" # This will be passed as acc_title
-        loss_plot_ylabel = C.LOSS_PLOT_YLABEL
-        iou_plot_ylabel = C.IOU_PLOT_YLABEL # This will be passed as acc_ylabel
-        
-        # Use functools.partial since \'import functools\' is used at the top
-        partial_train_func = functools.partial(train_uav_experiment_iteration, 
-                                     base_visuals_dir=config_visuals_dir, # This is config_results_dir/visuals/
-                                     train_ds=train_ds_global,
-                                     val_ds=val_ds_global,
-                                     test_ds=test_ds_global,
-                                     current_config_name=config_name,
-                                     current_model_type=current_model_type,
-                                     current_seq_len=current_seq_len,
-                                     current_batch_size=current_batch_size,
-                                     current_epochs=current_epochs,
-                                     current_lr=current_lr)
+        # Override global settings if specified in the current exp_config
+        batch_size = exp_config.get("BATCH_SIZE", C.BATCH_SIZE)
+        epochs = exp_config.get("EPOCHS", C.EPOCHS)
+        lr = exp_config.get("LEARNING_RATE", C.LEARNING_RATE)
+        overfit_this_config = exp_config.get("OVERFIT", C.OVERFIT) # Allow per-config overfit setting
+        overfit_n_samples_this_config = exp_config.get("OVERFIT_N_SAMPLES", C.OVERFIT_N_SAMPLES)
+        visualization_samples_this_config = exp_config.get("VISUALIZATION_SAMPLES", C.VISUALIZATION_SAMPLES)
 
-        run_experiments(
-            partial_train_func, # 1. train_experiment (positional)
-            config_results_dir, # 2. results_dir (positional)
-            config_visuals_dir, # 3. visuals_dir (positional)
-            current_epochs,     # 4. epochs (positional)
-            optimizer_names=C.OPTIMIZERS,
-            num_runs=C.RUNS_PER_OPTIMIZER,
-            experiment_title=config_name,
-            plot_filename=f"{config_name}_metrics",
-            csv_filename=f"{config_name}_metrics.csv",
-            loss_title=loss_plot_title,
-            acc_title=iou_plot_title, # Renamed from accuracy_plot_title
-            loss_ylabel=loss_plot_ylabel,
-            acc_ylabel=iou_plot_ylabel, # Renamed from accuracy_plot_ylabel
-            # Removed: scheduler_params_per_optimizer, resource_plot_filename, resource_tracker
+        print(f"\\n════════════════════════════════════════════════════════════════════════════════")
+        print(f"[INFO] Starting Experiment Configuration: {config_name}")
+        print(f"       Type: {model_type}, Arch: {model_architecture}, SeqLen: {seq_len}, Batch: {batch_size}, Epochs: {epochs}, LR: {lr}")
+        print(f"       Overfitting: {overfit_this_config} (with {overfit_n_samples_this_config} samples if True)")
+        print(f"       Visualization Samples: {visualization_samples_this_config}")
+        print(f"════════════════════════════════════════════════════════════════════════════════")
+
+        # --- Dataset Initialization for Current Configuration ---
+        is_temporal_config = (model_type == "temporal")
+        effective_seq_len = seq_len if is_temporal_config else 1
+        
+        load_n_for_overfit = None
+        # train_subset_fraction for FrameBBOXDataset; 1.0 means use all (after load_n_samples if applicable)
+        train_fraction_to_use = 1.0 
+
+        if overfit_this_config:
+            print(f"  [OVERFIT MODE] Configuring datasets to load up to {overfit_n_samples_this_config} samples using 'load_n_samples'.")
+            load_n_for_overfit = overfit_n_samples_this_config
+        else: 
+            if C.TRAIN_SUBSET_FRACTION < 1.0:
+                print(f"  Configuring train dataset to use {C.TRAIN_SUBSET_FRACTION*100}% of data via 'train_subset_fraction'.")
+                train_fraction_to_use = C.TRAIN_SUBSET_FRACTION
+        
+        print(f"  Initializing datasets for {config_name} (Temporal: {is_temporal_config}, SeqLen: {effective_seq_len}, OverfitLoadN: {load_n_for_overfit}, TrainFrac: {train_fraction_to_use if not overfit_this_config else 'N/A'})")
+
+        train_ds_for_run = FrameBBOXDataset(
+            root=C.DATA_ROOT, split='train', transform=train_tf,
+            seq_len=effective_seq_len, is_temporal=is_temporal_config,
+            load_n_samples=load_n_for_overfit, 
+            train_subset_fraction=train_fraction_to_use if not overfit_this_config else 1.0 
         )
-        print(f"[INFO] Completed all runs for configuration: {config_name}")
+        if overfit_this_config:
+            # Overfitting: reuse the train dataset for val and test to avoid reloading
+            val_ds_for_run = train_ds_for_run
+            test_ds_for_run = train_ds_for_run
+        else:
+            val_ds_for_run = FrameBBOXDataset(
+                root=C.DATA_ROOT, split='val', transform=val_tf,
+                seq_len=effective_seq_len, is_temporal=is_temporal_config,
+                load_n_samples=load_n_for_overfit
+            )
+            test_ds_for_run = FrameBBOXDataset(
+                root=C.DATA_ROOT, split='test', transform=val_tf,
+                seq_len=effective_seq_len, is_temporal=is_temporal_config,
+                load_n_samples=load_n_for_overfit
+            )
+        
+        # Report if the number of loaded samples is less than requested during overfit.
+        if overfit_this_config and load_n_for_overfit is not None and load_n_for_overfit > 0:
+            if len(train_ds_for_run) < load_n_for_overfit:
+                 print(f"    [INFO] Train dataset: Loaded {len(train_ds_for_run)} of {load_n_for_overfit} requested samples. (May be fewer files available or dataset limit)")
+            if len(val_ds_for_run) < load_n_for_overfit:
+                 print(f"    [INFO] Val dataset: Loaded {len(val_ds_for_run)} of {load_n_for_overfit} requested samples. (May be fewer files available or dataset limit)")
+            if len(test_ds_for_run) < load_n_for_overfit:
+                 print(f"    [INFO] Test dataset: Loaded {len(test_ds_for_run)} of {load_n_for_overfit} requested samples. (May be fewer files available or dataset limit)")
+        
+        print(f"  Effective train dataset size for this run: {len(train_ds_for_run)}")
+        print(f"  Effective val dataset size for this run: {len(val_ds_for_run)}")
+        print(f"  Effective test dataset size for this run: {len(test_ds_for_run)}")
 
-    print(f"\n\n{'='*80}")
-    print(f"[INFO] All experiment configurations completed.")
-    print(f"[INFO] Base results saved in: {overall_results_root_dir}")
-    print(f"{'='*80}")
+        # --- Define paths and titles for this specific configuration ---
+        config_results_dir = Path(C.RESULTS_BASE_DIR) / C.EXPERIMENT_NAME_BASE / config_name
+        config_visuals_dir = config_results_dir / "visuals"
+        config_visuals_dir.mkdir(parents=True, exist_ok=True)
+
+        # --- Prepare partial function for experiment_runner --- 
+        # Pass all current config-specific parameters to the iteration function
+        partial_train_iteration_func = functools.partial(
+             train_uav_experiment_iteration,
+             base_visuals_dir=config_visuals_dir, # Add base_visuals_dir here
+             train_ds=train_ds_for_run,
+             val_ds=val_ds_for_run,
+             test_ds=test_ds_for_run,
+             current_config_name=config_name,
+             current_model_type=model_type,
+             current_model_architecture=model_architecture, # Pass architecture
+             current_seq_len=seq_len,
+             current_batch_size=batch_size,
+             current_epochs=epochs,
+             current_lr=lr,
+             current_overfit_active=overfit_this_config,
+             current_overfit_n_samples=overfit_n_samples_this_config
+         )
+
+        # Allow overriding plot titles from config
+        loss_plot_title = exp_config.get("LOSS_PLOT_TITLE", C.LOSS_PLOT_TITLE)
+        iou_plot_title = exp_config.get("IOU_PLOT_TITLE", C.IOU_PLOT_TITLE) # Assuming IoU is primary accuracy metric
+        # Add F1 plot title if desired, e.g., in config_uav.py
+        f1_plot_title = exp_config.get("F1_PLOT_TITLE", f"F1 Score vs. Epoch ({config_name})")
+
+
+        # --- Run experiments for this configuration using experiment_runner --- 
+        results_for_config = run_experiments(
+            train_experiment=partial_train_iteration_func,
+            optimizer_names=C.OPTIMIZERS,                       # Renamed from optimizers_to_test
+            num_runs=C.RUNS_PER_OPTIMIZER,                      # Renamed from num_runs_per_optimizer
+            epochs=epochs, 
+            results_dir=config_results_dir, 
+            visuals_dir=config_visuals_dir, 
+            experiment_title=f"{C.EXPERIMENT_NAME_BASE}_{config_name}", # Renamed from base_experiment_name
+            # scheduler_params=C.SCHEDULER_PARAMS, # Removed
+            loss_title=loss_plot_title,                         # Unpacked from loss_plot_params
+            loss_ylabel=C.LOSS_PLOT_YLABEL,                     # Unpacked from loss_plot_params
+            acc_title=iou_plot_title,                           # Unpacked from accuracy_plot_params
+            acc_ylabel=C.IOU_PLOT_YLABEL,                       # Unpacked from accuracy_plot_params
+            f1_title=f1_plot_title,                             # Added
+            # save_config_to_json=True, # Removed
+            experiment_settings={**C.__dict__, **exp_config}    # Renamed from config_dict_to_save
+        )
+        all_configs_results.append(results_for_config)
+
+    print("\n[INFO] All experiment configurations completed.")

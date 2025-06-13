@@ -1,21 +1,11 @@
-
-#python prepare_uav_data.py 
-#  --input-root "C:\Users\Logan\Downloads\Anti-UAV-RGBT" 
-#  --output-root "C:\data\processed_anti_uav" 
-#  --splits train val test 
-#  --img-size 640 512 
-#  --workers 8 
-#  --ffmpeg-bin ffmpeg
-
-
 #!/usr/bin/env python3
-import argparse
 import json
 import subprocess
 import os
 from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 import cv2
+import random
 
 def dump_frames_task(args):
     seq_dir, split, output_root, interval, img_size, ffmpeg_bin = args
@@ -98,50 +88,99 @@ def process_sequence_task(args):
     return lines
 
 def main():
-    parser = argparse.ArgumentParser("Prepare Anti-UAV YOLO data")
-    parser.add_argument("--input-root",  required=True,
-                        help="Root with train/val/test folders")
-    parser.add_argument("--output-root", required=True,
-                        help="Where to write images/, labels/, sequences/")
-    parser.add_argument("--splits", nargs="+", default=["train","val","test"])
-    parser.add_argument("--seq-len", type=int, default=5)
-    parser.add_argument("--interval", type=int, default=1)
-    parser.add_argument("--img-size", nargs=2, type=int, default=[640,512])
-    parser.add_argument("--workers", type=int, default=os.cpu_count())
-    parser.add_argument("--ffmpeg-bin", default="ffmpeg")
-    args = parser.parse_args()
+    # Define script parameters here
+    input_root_val = "C:\Users\Logan\Downloads\Anti-UAV-RGBT"
+    output_root_val = "C:\data\processed_uav"
+    splits_val = ["train", "val", "test"]
+    seq_len_val = 5
+    interval_val = 1
+    img_size_val = [640, 512]
+    workers_val = os.cpu_count() # Default to number of CPU cores
+    ffmpeg_bin_val = "ffmpeg"
+    create_subsplits_val = [] # Example: ["trainval:train:val:0.8"]
 
-    input_root  = Path(args.input_root)
-    output_root = Path(args.output_root)
+    input_root  = Path(input_root_val)
+    output_root = Path(output_root_val)
 
-    for split in args.splits:
+    for split in splits_val:
         print(f"[INFO] Split '{split}'")
         seq_dirs = [d for d in (input_root/split).iterdir() if d.is_dir()]
         print(f"  → {len(seq_dirs)} sequences found")
 
         print("  [STEP 1] dumping frames...")
         dump_args = [
-            (sd, split, output_root, args.interval, args.img_size, args.ffmpeg_bin)
+            (sd, split, output_root, interval_val, img_size_val, ffmpeg_bin_val)
             for sd in seq_dirs
         ]
-        with ProcessPoolExecutor(max_workers=args.workers) as exe:
+        with ProcessPoolExecutor(max_workers=workers_val) as exe:
             exe.map(dump_frames_task, dump_args)
 
         print("  [STEP 2] writing labels and sequences...")
         proc_args = [
-            (sd.name, split, args.input_root, args.output_root,
-             args.seq_len, args.img_size)
+            (sd.name, split, input_root_val, output_root_val,
+             seq_len_val, img_size_val)
             for sd in seq_dirs
         ]
         all_lines = []
-        with ProcessPoolExecutor(max_workers=args.workers) as exe:
+        with ProcessPoolExecutor(max_workers=workers_val) as exe:
             for lines in exe.map(process_sequence_task, proc_args):
                 all_lines.extend(lines)
 
         seq_file = output_root/"sequences"/f"{split}.txt"
         seq_file.parent.mkdir(parents=True, exist_ok=True)
-        seq_file.write_text("\n".join(all_lines))
-        print(f"  ✔ wrote {len(all_lines)} lines to {seq_file}\n")
+        seq_file.write_text("\\n".join(all_lines))
+        print(f"  ✔ wrote {len(all_lines)} lines to {seq_file}\\n")
+
+    # Create sub-splits if defined
+    if create_subsplits_val:
+        print("[INFO] Creating sub-splits...")
+        for subsplit_def in create_subsplits_val:
+            try:
+                parts = subsplit_def.split(':')
+                if len(parts) != 4:
+                    raise ValueError("Incorrect number of parts")
+                source_split, target1_name, target2_name, ratio1_str = parts
+                ratio1 = float(ratio1_str)
+                if not (0 < ratio1 < 1):
+                    print(f"[WARN] Invalid ratio {ratio1} for sub-split '{subsplit_def}'. Must be between 0 (exclusive) and 1 (exclusive). Skipping.")
+                    continue
+            except ValueError as e:
+                print(f"[WARN] Invalid format for sub-split definition '{subsplit_def}'. Error: {e}. "
+                      "Expected 'source:target1:target2:ratio1'. Skipping.")
+                continue
+
+            source_seq_file = output_root / "sequences" / f"{source_split}.txt"
+            if not source_seq_file.exists():
+                print(f"[WARN] Source sequence file {source_seq_file} for sub-splitting not found. "
+                      f"Ensure '{source_split}' was processed via --splits argument. Skipping '{subsplit_def}'.")
+                continue
+
+            print(f"  Processing sub-split: {source_split} -> {target1_name} ({ratio1*100:.1f}%), {target2_name} ({(1-ratio1)*100:.1f}%)")
+
+            with open(source_seq_file, 'r') as f:
+                lines = [line.strip() for line in f if line.strip()]
+
+            if not lines:
+                print(f"[WARN] Source sequence file {source_seq_file} is empty. Skipping sub-split '{subsplit_def}'.")
+                continue
+
+            random.shuffle(lines)
+
+            split_idx = int(len(lines) * ratio1)
+            lines_target1 = lines[:split_idx]
+            lines_target2 = lines[split_idx:]
+
+            target1_seq_file = output_root / "sequences" / f"{target1_name}.txt"
+            # Parent directory output_root/"sequences" should exist from main split processing
+            with open(target1_seq_file, 'w') as f:
+                f.write("\\n".join(lines_target1))
+            print(f"  ✔ Wrote {len(lines_target1)} lines to {target1_seq_file}")
+
+            target2_seq_file = output_root / "sequences" / f"{target2_name}.txt"
+            with open(target2_seq_file, 'w') as f:
+                f.write("\\n".join(lines_target2))
+            print(f"  ✔ Wrote {len(lines_target2)} lines to {target2_seq_file}")
+        print("") # Add a newline for better formatting
 
     print("[INFO] All splits processed!")
 
