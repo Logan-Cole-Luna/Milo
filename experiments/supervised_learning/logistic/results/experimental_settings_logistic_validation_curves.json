@@ -65,8 +65,7 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": false,
-      "foreach": true,
-      "lr": 0.05
+      "foreach": true
     },
     "MILO_LW": {
       "normalize": true,
@@ -79,38 +78,51 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": true,
-      "foreach": true,
-      "lr": 0.05
+      "foreach": true
+    },
+    "MUON": {
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "weight_decay": 0.005244086388200056
+    },
+    "ADALAYER": {
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "weight_decay": 0.00013304473900294277
+    },
+    "ADAM_MINI": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.0030928948066647087
     },
     "SGD": {
       "momentum": 0.8998094246549302,
-      "nesterov": true,
-      "weight_decay": 0.000662839548718804,
-      "lr": 0.039339330820679634
+      "weight_decay": 0.000662839548718804
     },
     "ADAMW": {
+      "weight_decay": 0.0008181914254752851,
       "betas": [
         0.95,
         0.99
-      ],
-      "eps": 1e-08,
-      "weight_decay": 0.0008181914254752851,
-      "lr": 0.0013284190648269844
+      ]
     },
     "ADAGRAD": {
       "lr_decay": 0.056726770795938034,
       "weight_decay": 0.000794307692533354,
-      "eps": 7.2903296481874466e-09,
-      "lr": 0.024208948380582317
+      "eps": 7.2903296481874466e-09
     },
     "NOVOGRAD": {
       "betas": [
         0.9,
         0.98
       ],
-      "weight_decay": 0.001743218868544122,
-      "grad_averaging": true,
-      "lr": 0.006286766705578023
+      "weight_decay": 0.001743218868544122
     },
     "experiment_title": "LOGISTIC Experiment ",
     "epochs": 10,
