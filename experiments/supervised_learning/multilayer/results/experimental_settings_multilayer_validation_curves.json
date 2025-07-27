@@ -72,8 +72,7 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": false,
-      "foreach": true,
-      "lr": 0.05
+      "foreach": true
     },
     "MILO_LW": {
       "normalize": true,
@@ -86,38 +85,50 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": true,
-      "foreach": true,
-      "lr": 0.05
+      "foreach": true
+    },
+    "MUON": {
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "weight_decay": 0.007928360377172776
+    },
+    "ADALAYER": {
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "weight_decay": 1.979096189972884e-05
+    },
+    "ADAM_MINI": {
+      "betas": [
+        0.95,
+        0.999
+      ],
+      "weight_decay": 0.004876876391217932
     },
     "SGD": {
       "momentum": 0.9034502356202967,
-      "nesterov": true,
-      "weight_decay": 0.0009499778117067644,
-      "lr": 0.03355771956633547
+      "weight_decay": 0.0009499778117067644
     },
     "ADAMW": {
+      "weight_decay": 0.0008843088627515674,
       "betas": [
         0.9,
         0.98
-      ],
-      "eps": 1e-08,
-      "weight_decay": 0.0008843088627515674,
-      "lr": 0.00443251385378245
+      ]
     },
     "ADAGRAD": {
       "lr_decay": 0.01638547525241285,
-      "weight_decay": 0.0008781516037165359,
-      "eps": 1e-10,
-      "lr": 0.0826128618686826
+      "weight_decay": 0.0008781516037165359
     },
     "NOVOGRAD": {
       "betas": [
         0.9,
         0.98
       ],
-      "weight_decay": 0.0012790436384218147,
-      "grad_averaging": true,
-      "lr": 0.017742404224804963
+      "weight_decay": 0.0012790436384218147
     },
     "experiment_title": "MULTILAYER Experiment ",
     "epochs": 10,

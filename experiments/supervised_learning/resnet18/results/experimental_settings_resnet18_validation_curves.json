@@ -2,7 +2,7 @@
   "model": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "model_architecture": {
     "conv1.weight": [
@@ -254,44 +254,44 @@
     ],
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "batch_size": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "dataset": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "criterion": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "device": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "scheduler_params": {
     "scheduler": "None",
     "params": {},
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "validation_split_ratio": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "test_split_ratio": {
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   },
   "optimizer_params": {
     "MILO": {
@@ -305,8 +305,7 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": false,
-      "foreach": true,
-      "lr": 0.005
+      "foreach": true
     },
     "MILO_LW": {
       "normalize": true,
@@ -319,41 +318,60 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": true,
-      "foreach": true,
-      "lr": 0.005
+      "foreach": true
+    },
+    "MUON": {
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.01
+    },
+    "ADALAYER": {
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0
+    },
+    "ADAM_MINI": {
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0
     },
     "SGD": {
-      "momentum": 0.7934733244263732,
+      "momentum": 0.9,
       "nesterov": true,
-      "weight_decay": 0.00261537343333295,
-      "lr": 0.016132142705007842
+      "weight_decay": 0.0001
     },
     "ADAMW": {
       "betas": [
         0.9,
-        0.98
+        0.999
       ],
       "eps": 1e-08,
-      "weight_decay": 0.0005981898437781064,
-      "lr": 0.007342088949363189
+      "weight_decay": 0.01
     },
     "ADAGRAD": {
-      "lr_decay": 0.011408429774526819,
-      "weight_decay": 0.003819719064834646,
-      "eps": 3.8311481724371695e-10,
-      "lr": 0.007809622309952696
+      "lr_decay": 0,
+      "weight_decay": 0.0,
+      "eps": 1e-10
     },
     "NOVOGRAD": {
       "betas": [
-        0.95,
+        0.9,
         0.99
       ],
-      "weight_decay": 0.0006555151297952681,
-      "grad_averaging": true,
-      "lr": 0.010797196053270336
+      "weight_decay": 0.001,
+      "grad_averaging": true
     },
     "experiment_title": "RESNET18 Experiment ",
     "epochs": 10,
-    "num_runs": 5
+    "num_runs": 3
   }
 }
