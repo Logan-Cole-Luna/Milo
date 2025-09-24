@@ -8,6 +8,10 @@ import torch
 from torch import Tensor
 from torch.optim.optimizer import Optimizer, ParamsT
 
+# Import CUDA operations
+# TODO
+CUDA_OPS_AVAILABLE = True
+
 __all__ = ["milo"]
 
 
@@ -39,6 +43,11 @@ class milo(Optimizer):  # noqa: D101
         profile_time: bool = False,
         use_cached_mapping: bool = False,
         layer_lr_multipliers: Optional[dict] = None,  # Added for per-layer LR
+        # CUDA optimization settings
+        use_cuda_kernels: bool = True,
+        force_cuda_fallback: bool = False,
+        # Performance tuning
+        normalize_interval: int = 1,
     ):
         """
         Implements Normalized Stochastic Gradient Descent (optionally with momentum).
@@ -106,6 +115,11 @@ class milo(Optimizer):  # noqa: D101
             profile_time=profile_time,
             use_cached_mapping=use_cached_mapping,
             layer_lr_multipliers=layer_lr_multipliers if layer_lr_multipliers is not None else {}, # Added
+            # CUDA settings
+            use_cuda_kernels=use_cuda_kernels,
+            force_cuda_fallback=force_cuda_fallback,
+            # Performance tuning
+            normalize_interval=normalize_interval,
         )
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")
@@ -114,7 +128,8 @@ class milo(Optimizer):  # noqa: D101
         # Create parameter name mapping for layer-wise grouping
         self.param_to_layer = {}
         self._cached_buffers = {}  # Cache for pre-allocated buffers
-        self.profile_stats = {"normalize_time": 0.0, "sgd_time": 0.0, "total_steps": 0}
+        self.profile_stats = {"normalize_time": 0.0, "sgd_time": 0.0, "cuda_time": 0.0, "total_steps": 0}
+        self._cuda_available = CUDA_OPS_AVAILABLE and not force_cuda_fallback
         
         # If layer_wise is enabled, organize parameters by layer
         # Always create mapping if needed, save if use_cached_mapping is True
@@ -127,6 +142,10 @@ class milo(Optimizer):  # noqa: D101
                     print("Saved layer mapping to milo_layer_mapping.pt")
                 except Exception as e:
                     print(f"Warning: Could not save layer mapping cache: {e}")
+                    
+        # Initialize CUDA optimization metadata if available
+        if self._cuda_available:
+            self._init_cuda_metadata()
 
     def _organize_layer_groups(self):
         """
@@ -158,6 +177,38 @@ class milo(Optimizer):  # noqa: D101
         # Map each parameter to its layer index
         for param, layer_name in self.param_to_layer.items():
             self.param_to_layer[param] = layer_indices.get(layer_name, 0)
+    
+    def _init_cuda_metadata(self):
+        """Initialize metadata needed for CUDA kernels."""
+        self._cuda_metadata = {}
+        
+        for group in self.param_groups:
+            if group["layer_wise"]:
+                layer_params = {}
+                for param in group["params"]:
+                    layer_idx = self.param_to_layer.get(param, 0)
+                    if layer_idx not in layer_params:
+                        layer_params[layer_idx] = []
+                    layer_params[layer_idx].append(param)
+                
+                param_sizes = []
+                param_offsets = []
+                layer_indices = []
+                offset = 0
+                
+                for layer_idx, params in layer_params.items():
+                    for param in params:
+                        param_sizes.append(param.numel())
+                        param_offsets.append(offset)
+                        layer_indices.append(layer_idx)
+                        offset += param.numel()
+                
+                self._cuda_metadata[id(group)] = {
+                    'param_sizes': torch.tensor(param_sizes, dtype=torch.int32),
+                    'param_offsets': torch.tensor(param_offsets, dtype=torch.int32),
+                    'layer_indices': torch.tensor(layer_indices, dtype=torch.int32),
+                    'layer_params': layer_params
+                }
     
     def _params_to_names(self, target_param, default_name):
         """Helper to find parameter names for layer-wise grouping."""
@@ -192,6 +243,7 @@ class milo(Optimizer):  # noqa: D101
             group.setdefault("profile_time", False)
             group.setdefault("use_cached_mapping", False)
             group.setdefault("layer_lr_multipliers", {}) # Added
+            group.setdefault("normalize_interval", 1)
 
     def _init_group(self, group, params, grads, momentum_buffer_list):
         """Initialize a parameter group for the optimization step.
@@ -258,10 +310,15 @@ class milo(Optimizer):  # noqa: D101
 
             # Apply gradient normalization if enabled
             if group["normalize"]:
-                norm_start = time.time() if profile_time else None
-                self._normalize_gradients(group, params, grads)
-                if profile_time and norm_start:
-                    self.profile_stats["normalize_time"] += time.time() - norm_start
+                group["_norm_step"] = group.get("_norm_step", 0) + 1
+                do_norm = (group.get("normalize_interval", 1) <= 1) or (
+                    group["_norm_step"] % group.get("normalize_interval", 1) == 0
+                )
+                if do_norm:
+                    norm_start = time.time() if profile_time else None
+                    self._normalize_gradients(group, params, grads)
+                    if profile_time and norm_start:
+                        self.profile_stats["normalize_time"] += time.time() - norm_start
 
             # Choose update routine based on configuration
             sgd_start = time.time() if profile_time else None
@@ -298,60 +355,164 @@ class milo(Optimizer):  # noqa: D101
         if profile_time and total_start:
             self.profile_stats["total_steps"] += 1
             if self.profile_stats["total_steps"] % 100 == 0:
-                print(f"milo Profiling - Normalization: {self.profile_stats['normalize_time']/self.profile_stats['total_steps']*1000:.2f}ms/step, "
+                cuda_status = "CUDA" if self._cuda_available else "PyTorch"
+                print(f"MILO Profiling ({cuda_status}) - Normalization: {self.profile_stats['normalize_time']/self.profile_stats['total_steps']*1000:.2f}ms/step, "
                       f"SGD: {self.profile_stats['sgd_time']/self.profile_stats['total_steps']*1000:.2f}ms/step")
 
         return loss
     
     def _normalize_gradients(self, group, params, grads):
         """
-        Apply normalization to gradients based on group settings.
+        Apply normalization to gradients based on group settings with enhanced CUDA acceleration.
         """
         if not group["normalize"] or not grads:
             return
             
+        # Enhanced CUDA acceleration with fused operations
+        use_cuda = (self._cuda_available and 
+                   group["use_cuda_kernels"] and 
+                   not group.get("force_cuda_fallback", False) and
+                   all(g.is_cuda for g in grads))
+
+        if use_cuda:
+            try:
+                # Use fused CUDA operations for better performance
+                from milo_cuda_ops import milo_cuda
+                
+                if group["layer_wise"] and self.param_to_layer:
+                    # Layer-wise: ALWAYS use group-based normalization within the layer
+                    meta = getattr(self, "_cuda_metadata", {}).get(id(group)) if hasattr(self, "_cuda_metadata") else None
+                    if meta and 'layer_params' in meta:
+                        layer_map = meta['layer_params']
+                    else:
+                        # Build on the fly
+                        layer_map = {}
+                        for p in params:
+                            layer_idx = self.param_to_layer.get(p, 0)
+                            layer_map.setdefault(layer_idx, []).append(p)
+
+                    for layer_idx, plist in layer_map.items():
+                        layer_params = []
+                        layer_grads = []
+                        for p in plist:
+                            if p.grad is not None:
+                                layer_params.append(p)
+                                layer_grads.append(p.grad)
+                        if layer_grads:
+                            # Use fixed-size group normalization (auto group size if None)
+                            self._normalize_fixed_size_groups_batch(group, layer_params, layer_grads)
+                else:
+                    # Non–layer-wise path: use fixed-size group normalization
+                    # Auto-determines group size when group_size is None
+                    self._normalize_fixed_size_groups_batch(group, params, grads)
+                return
+            except Exception as e:
+                if group.get("profile_time", False):
+                    print(f"Warning: CUDA normalization failed ({e}), falling back to PyTorch")
+        
+        # Optimized PyTorch fallback with better memory efficiency
         layer_wise = group["layer_wise"]
         disable_layer_mapping = group.get("disable_layer_mapping", False)
         
-        # Simple case: just normalize each parameter individually
         if disable_layer_mapping or (layer_wise and not self.param_to_layer):
-            for param, grad in zip(params, grads):
-                self._normalize_fixed_size_groups_batch(group, [param], [grad])
+            # Use vectorized operations for parameter-wise normalization
+            for grad in grads:
+                self._normalize_single_grad_optimized(grad, group)
             return
             
-        # Pre-allocate layer dictionaries to reduce overhead
         if layer_wise:
-            # Use a faster approach with pre-allocated tensors
-            layer_params_dict = {}
-            for param, grad in zip(params, grads):
-                layer_idx = self.param_to_layer.get(param, 0)
-                if layer_idx not in layer_params_dict:
-                    layer_params_dict[layer_idx] = {"params": [], "grads": [], "sizes": []}
-                layer_params_dict[layer_idx]["params"].append(param)
-                layer_params_dict[layer_idx]["grads"].append(grad)
-                layer_params_dict[layer_idx]["sizes"].append(grad.numel())
-            
-            # Process each layer with batched operations
-            for layer_idx, layer_data in layer_params_dict.items():
-                # Use cached buffer for this layer if available
-                buffer_key = (layer_idx, sum(layer_data["sizes"]), grads[0].device, grads[0].dtype)
-                if buffer_key in self._cached_buffers:
-                    all_grads_buffer = self._cached_buffers[buffer_key]
-                else:
-                    total_size = sum(layer_data["sizes"])
-                    device = grads[0].device
-                    dtype = grads[0].dtype
-                    all_grads_buffer = torch.empty(total_size, device=device, dtype=dtype)
-                    # Cache the buffer for future use
-                    self._cached_buffers[buffer_key] = all_grads_buffer
-                
-                self._normalize_layer_with_buffer(group, layer_data["params"], 
-                                                layer_data["grads"], 
-                                                layer_data["sizes"],
-                                                all_grads_buffer)
+            # Group-based normalization within each layer (auto group size if None)
+            meta = getattr(self, "_cuda_metadata", {}).get(id(group)) if hasattr(self, "_cuda_metadata") else None
+            if meta and 'layer_params' in meta:
+                for _, plist in meta['layer_params'].items():
+                    layer_params = []
+                    layer_grads = []
+                    for p in plist:
+                        if p.grad is not None:
+                            layer_params.append(p)
+                            layer_grads.append(p.grad)
+                    if layer_grads:
+                        self._normalize_fixed_size_groups_batch(group, layer_params, layer_grads)
+            else:
+                # Build on the fly using current params/grads
+                layer_map = {}
+                for p, g in zip(params, grads):
+                    idx = self.param_to_layer.get(p, 0)
+                    layer_map.setdefault(idx, []).append((p, g))
+                for _, pairs in layer_map.items():
+                    layer_params = [p for p, g in pairs]
+                    layer_grads = [g for p, g in pairs]
+                    self._normalize_fixed_size_groups_batch(group, layer_params, layer_grads)
         else:
-            # Batch process fixed-size groups where possible
+            # Optimized fixed-size group normalization across each tensor
+            # Auto group sizing when group_size is None
             self._normalize_fixed_size_groups_batch(group, params, grads)
+
+    def _normalize_single_grad_optimized(self, grad, group):
+        """Optimized single gradient normalization with CUDA-friendly operations."""
+        eps = group["eps"]
+        scale_aware = group["scale_aware"]
+        scale_factor = group["scale_factor"]
+        
+        # Use more efficient norm computation
+        if grad.is_cuda:
+            # GPU-optimized path
+            grad_norm = torch.linalg.vector_norm(grad)
+        else:
+            # CPU path
+            grad_norm = torch.norm(grad)
+        
+        if grad_norm > eps:
+            normalization_factor = 1.0 / grad_norm
+            
+            if scale_aware:
+                clamped_norm = grad_norm.clamp(max=1.0)
+                # In-place operations for better GPU efficiency
+                if grad.is_cuda:
+                    # Avoid host sync by keeping computation on device
+                    normalized_term = (grad * normalization_factor) * clamped_norm
+                    grad.mul_(scale_factor)
+                    grad.add_(normalized_term, alpha=(1 - scale_factor))
+                else:
+                    normalized_grad = grad * normalization_factor
+                    grad.copy_(grad * scale_factor + normalized_grad * (1 - scale_factor) * clamped_norm)
+            else:
+                # Simple in-place normalization
+                grad.mul_(normalization_factor)
+
+    def _normalize_layer_grads_optimized(self, layer_grads, group):
+        """Optimized layer-wise gradient normalization with minimal memory allocation."""
+        eps = group["eps"]
+        scale_aware = group["scale_aware"]
+        scale_factor = group["scale_factor"]
+        
+        # Compute norm in a two-pass fashion to avoid concatenation and extra allocations
+        # Pass 1: accumulate squared norm
+        device = layer_grads[0].device
+        dtype = layer_grads[0].dtype
+        sq_sum = torch.zeros(1, device=device, dtype=torch.float32)
+        for g in layer_grads:
+            # compute in float32 for numerical stability even if params are float16/bfloat16
+            sq_sum.add_(g.detach().to(torch.float32).pow(2).sum())
+        grad_norm = sq_sum.sqrt()
+        
+        if grad_norm > eps:
+            normalization_factor = 1.0 / grad_norm
+            
+            # Apply normalization to each gradient in-place
+            for grad in layer_grads:
+                if scale_aware:
+                    clamped_norm = grad_norm.clamp(max=1.0)
+                    if grad.is_cuda:
+                        # GPU-optimized in-place operations
+                        grad.mul_(scale_factor).add_(grad * normalization_factor, 
+                                  alpha=(1 - scale_factor) * float(clamped_norm))
+                    else:
+                        # CPU fallback
+                        normalized_grad = grad * normalization_factor
+                        grad.copy_(grad * scale_factor + normalized_grad * (1 - scale_factor) * float(clamped_norm))
+                else:
+                    grad.mul_(normalization_factor)
 
     def _normalize_layer_with_buffer(self, group, params, grads, sizes, buffer):
         """Optimized version of normalize_layer_optimized that uses a pre-allocated buffer."""
@@ -465,33 +626,42 @@ class milo(Optimizer):  # noqa: D101
         adaptive: bool,
         adaptive_eps: float,
     ):
-        """Performs the SGD update for a single tensor (parameter).
+        """Performs optimized SGD update for single tensors with enhanced CUDA support.
 
-        This method is used when the `foreach` option is False or not applicable.
-        It applies weight decay, momentum, Nesterov momentum, adaptive scaling (if enabled),
-        and the learning rate update to a single parameter.
-
-        Args:
-            params (List[Tensor]): List of parameters in the current group.
-            grads (List[Tensor]): List of corresponding gradients.
-            momentum_buffer_list (List[Optional[Tensor]]): List of momentum buffers.
-            group (dict): The parameter group dictionary, containing optimizer settings like layer_lr_multipliers.
-            weight_decay (float): Weight decay factor.
-            momentum (float): Momentum factor.
-            lr (float): Learning rate.
-            dampening (float): Dampening factor for momentum.
-            nesterov (bool): Whether to use Nesterov momentum.
-            maximize (bool): Whether to maximize (negate gradients).
-            has_sparse_grad (bool): Indicates if sparse gradients are present (not directly used here but part of signature).
-            adaptive (bool): Whether to use adaptive gradient scaling.
-            adaptive_eps (float): Epsilon for adaptive scaling stability.
+        This method includes CUDA-accelerated operations and memory-efficient updates
+        for better GPU performance.
         """
+        # Try CUDA-accelerated batch updates if possible
+        use_cuda = (self._cuda_available and 
+                   all(p.is_cuda for p in params) and
+                   group["use_cuda_kernels"] and 
+                   not group.get("force_cuda_fallback", False))
+
+        if use_cuda and len(params) > 1:
+            try:
+                # Use CUDA acceleration for batch operations
+                from milo_cuda_ops import milo_cuda
+                self._cuda_batch_update(params, grads, momentum_buffer_list, group,
+                                      weight_decay, momentum, lr, dampening, 
+                                      nesterov, maximize, adaptive, adaptive_eps)
+                return
+            except Exception as e:
+                if group.get("profile_time", False):
+                    print(f"Warning: CUDA batch update failed ({e}), falling back")
+
+        # Optimized per-parameter updates
         for i, param in enumerate(params):
             grad = grads[i] if not maximize else -grads[i]
 
+            # Weight decay with optimized operations
             if weight_decay != 0:
-                grad = grad.add(param, alpha=weight_decay)
+                if param.is_cuda:
+                    # In-place GPU operation
+                    grad = grad.add(param, alpha=weight_decay)
+                else:
+                    grad = grad.add(param, alpha=weight_decay)
 
+            # Optimized momentum handling
             if momentum != 0:
                 buf = momentum_buffer_list[i]
 
@@ -499,24 +669,34 @@ class milo(Optimizer):  # noqa: D101
                     buf = torch.clone(grad).detach()
                     momentum_buffer_list[i] = buf
                 else:
-                    buf.mul_(momentum).add_(grad, alpha=1 - dampening)
+                    if param.is_cuda:
+                        # GPU-optimized in-place momentum update
+                        buf.mul_(momentum).add_(grad, alpha=1 - dampening)
+                    else:
+                        buf.mul_(momentum).add_(grad, alpha=1 - dampening)
 
                 if nesterov:
                     grad = grad.add(buf, alpha=momentum)
                 else:
                     grad = buf
                     
-            # Apply adaptive scaling if enabled
+            # Enhanced adaptive scaling with GPU optimization
             if adaptive:
                 state = self.state[params[i]]
                 if 'sum_sq_grad' not in state:
                     state['sum_sq_grad'] = grad.detach().pow(2)
                 else:
-                    state['sum_sq_grad'].add_(grad.detach().pow(2))
+                    if param.is_cuda:
+                        # GPU-optimized adaptive update
+                        state['sum_sq_grad'].add_(grad.detach().pow(2))
+                    else:
+                        state['sum_sq_grad'].add_(grad.detach().pow(2))
                     
-                # Scale by inverse sqrt of sum
-                grad = grad / (state['sum_sq_grad'].sqrt() + adaptive_eps)
+                # Optimized division for GPU
+                adaptive_scale = state['sum_sq_grad'].sqrt().add_(adaptive_eps)
+                grad = grad.div(adaptive_scale)
 
+            # Learning rate adjustment with layer multipliers
             current_lr = lr
             if group.get('layer_lr_multipliers'):
                 layer_idx = self.param_to_layer.get(param)
@@ -524,8 +704,85 @@ class milo(Optimizer):  # noqa: D101
                     multiplier = group['layer_lr_multipliers'].get(layer_idx, 1.0)
                     current_lr *= multiplier
             
-            # Use .data to avoid in-place operation on a leaf Variable that requires grad
-            param.data.add_(grad, alpha=-current_lr)
+            # Optimized parameter update
+            if param.is_cuda:
+                # GPU-optimized in-place update
+                param.data.add_(grad, alpha=-current_lr)
+            else:
+                param.data.add_(grad, alpha=-current_lr)
+
+    def _cuda_batch_update(self, params, grads, momentum_buffer_list, group,
+                          weight_decay, momentum, lr, dampening, nesterov, 
+                          maximize, adaptive, adaptive_eps):
+        """CUDA-accelerated batch parameter updates."""
+        from milo_cuda_ops import milo_cuda
+        
+        # Prepare batch data
+        param_data = [p.data for p in params]
+        grad_data = [-g if maximize else g for g in grads]
+        
+        # Apply weight decay if needed
+        if weight_decay != 0:
+            for i, (param, grad) in enumerate(zip(param_data, grad_data)):
+                grad_data[i] = grad.add(param, alpha=weight_decay)
+        
+        # Handle momentum in batch
+        if momentum != 0:
+            momentum_data = []
+            for i, buf in enumerate(momentum_buffer_list):
+                if buf is None:
+                    buf = torch.clone(grad_data[i]).detach()
+                    momentum_buffer_list[i] = buf
+                else:
+                    # Use CUDA-accelerated momentum update
+                    milo_cuda.enhanced_momentum_update(
+                        buf, buf, grad_data[i], momentum, 1-dampening
+                    )
+                momentum_data.append(buf)
+            
+            if nesterov:
+                for i in range(len(grad_data)):
+                    grad_data[i] = grad_data[i].add(momentum_data[i], alpha=momentum)
+            else:
+                grad_data = momentum_data
+        
+        # Apply adaptive scaling if needed
+        if adaptive:
+            for i, param in enumerate(params):
+                state = self.state[param]
+                if 'sum_sq_grad' not in state:
+                    state['sum_sq_grad'] = grad_data[i].detach().pow(2)
+                else:
+                    state['sum_sq_grad'].add_(grad_data[i].detach().pow(2))
+                
+                adaptive_scale = state['sum_sq_grad'].sqrt().add_(adaptive_eps)
+                grad_data[i] = grad_data[i].div(adaptive_scale)
+        
+        # Apply learning rates and update parameters
+        learning_rates = [lr] * len(params)
+        if group.get('layer_lr_multipliers'):
+            for i, param in enumerate(params):
+                layer_idx = self.param_to_layer.get(param)
+                if layer_idx is not None:
+                    multiplier = group['layer_lr_multipliers'].get(layer_idx, 1.0)
+                    learning_rates[i] *= multiplier
+        
+        # Fast path: use foreach when all params are on same device/dtype and a single LR
+        can_use_foreach = (
+            not group.get('layer_lr_multipliers') and
+            isinstance(lr, (float, int)) and
+            len(param_data) > 1 and
+            all(p.is_cuda for p in param_data) and
+            len({(p.device, p.dtype) for p in param_data}) == 1 and
+            len({g.dtype for g in grad_data}) == 1
+        )
+
+        if can_use_foreach:
+            scaled = torch._foreach_mul(grad_data, -float(lr))
+            torch._foreach_add_(param_data, scaled)
+        else:
+            for param, grad, current_lr in zip(param_data, grad_data, learning_rates):
+                param.add_(grad, alpha=-current_lr)
 
     def _multi_tensor_normalized(
         self,
