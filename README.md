@@ -1,4 +1,3 @@
-\
 # Milo: A Magnitude-Invariant Learning Optimizer with Group-Wise Gradient Normalization
 
 This repository provides the official implementation and experimental code for "Milo: A Magnitude-Invariant Learning Optimizer with Group-Wise Gradient Normalization". MILO is a novel optimization algorithm designed to address the challenges of gradient scale variability in deep learning.
