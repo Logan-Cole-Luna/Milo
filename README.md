@@ -160,19 +160,6 @@ Our work utilizes or is inspired by concepts from the following repositories:
 2. **[NovoGrad-pytorch](https://github.com/lonePatient/NovoGrad-pytorch)** (MIT License)  
   - Citation: \citep{lonePatient2019novograd}
 
-## Citing MILO
-
-If you use MILO or this codebase in your research, please cite our paper:
-
-```bibtex
-@inproceedings{milo2025neurips,
-  title={MILO: Magnitude-Invariant Learning Optimizer},
-  author={},
-  booktitle={},
-  year={2025}
-}
-```
-
 ## License
 
 This work is licensed under a [Creative Commons Attribution 4.0 International License](http://creativecommons.org/licenses/by/4.0/).
