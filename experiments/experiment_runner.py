@@ -7,7 +7,9 @@ import time
 import json
 from .plotting import (
     plot_seaborn_style_with_error_bars,
-    plot_resource_usage
+    plot_resource_usage,
+    plot_layer_runtime_breakdown,
+    plot_forward_backward_runtime_breakdown
 )
 from .train_utils import (
     calculate_statistics,
@@ -84,7 +86,19 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
     all_runs_train_f1s = {opt: [] for opt in optimizer_names}
     all_runs_train_aucs = {opt: [] for opt in optimizer_names}
 
+    # Dictionary to store layer runtime histories
+    all_runs_layer_runtimes = {opt: [] for opt in optimizer_names}
+    all_runs_layer_runtimes_back = {opt: [] for opt in optimizer_names}  # Backward runtimes
+    # Dictionary to store component-level runtime histories (forward, backward, optimizer, overhead)
+    all_runs_component_runtimes = {opt: [] for opt in optimizer_names}
+    all_layer_names = None  # to hold consistent layer order
+
     all_runs_test_results = []
+
+    # Optional iteration-level logging (populated only if train_experiment returns them)
+    all_runs_iteration_logs = {opt: [] for opt in optimizer_names}
+    all_runs_validation_walltimes = {opt: [] for opt in optimizer_names}
+    all_runs_epoch_end_walltimes = {opt: [] for opt in optimizer_names}
 
     # Initialize resource tracking data AFTER warm-up
     resource_info_list = []
@@ -108,10 +122,11 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
 
             # Initialize variables for the run to ensure they exist in all paths
             val_loss_hist, val_acc_hist, val_f1_hist, val_auc_hist = None, None, None, None
-            iter_cost, walltime, grad_norms, ln, test_metrics, steps_per_epoch, train_metrics_run = None, None, None, None, None, None, None
-            run_specific_settings_value = None 
-
+            # Dummy placeholders include layer_runtime_history and layer_names to prevent NameError
+            iter_cost, walltime, grad_norms, layer_runtime_history, layer_bwd_runtime_history, layer_names, ln, test_metrics, steps_per_epoch, train_metrics_run = None, None, None, None, None, None, None, None, None, None
+            run_specific_settings_value = None
             try:
+                iter_cost, walltime, grad_norms, layer_runtime_history, layer_bwd_runtime_history, layer_names, ln, test_metrics, steps_per_epoch, train_metrics_run = None, None, None, None, None, None, None, None, None, None
                 request_settings_now = False
                 # Condition 1: First ever settings fetch (first optimizer, first run, no initial experiment_settings, no optimizer_params in collected_settings yet)
                 is_first_ever_settings_fetch = (
@@ -132,22 +147,63 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
                 results_to_unpack = None
                 if request_settings_now:
                     out_data = train_experiment(opt, return_settings=True)
-                    if isinstance(out_data, tuple) and len(out_data) == 12:
-                        run_specific_settings_value = out_data[-1]
-                        results_to_unpack = out_data[:-1]
-                    elif isinstance(out_data, tuple) and len(out_data) == 11: # Settings requested but not returned
-                        results_to_unpack = out_data
-                        print(f"Warning: Requested settings for {opt}, but train_experiment returned 11 items (no settings).")
+                    if isinstance(out_data, tuple) and len(out_data) >= 12:
+                        # If last item is a settings dict, separate it
+                        if isinstance(out_data[-1], dict) and (('model' in out_data[-1]) or ('optimizer_params' in out_data[-1])):
+                            run_specific_settings_value = out_data[-1]
+                            results_to_unpack = out_data[:-1]
+                        else:
+                            results_to_unpack = out_data
+                            print(f"Warning: Requested settings for {opt}, but train_experiment did not return settings as last item.")
                     else:
-                        raise ValueError(f"train_experiment for {opt} (settings requested) returned {len(out_data) if isinstance(out_data, tuple) else 'non-tuple'}. Expected 11 or 12 items. Data: {out_data}")
+                        raise ValueError(f"train_experiment for {opt} (settings requested) returned {len(out_data) if isinstance(out_data, tuple) else 'non-tuple'}. Expected >=12 items. Data: {out_data}")
                 else:
                     out_data = train_experiment(opt, return_settings=False)
-                    if not (isinstance(out_data, tuple) and len(out_data) == 11):
-                        raise ValueError(f"train_experiment for {opt} (no settings requested) returned {len(out_data) if isinstance(out_data, tuple) else 'non-tuple'}. Expected 11 items. Data: {out_data}")
+                    if not isinstance(out_data, tuple):
+                        raise ValueError(f"train_experiment for {opt} (no settings requested) returned non-tuple. Data: {out_data}")
                     results_to_unpack = out_data
 
-                # Unpack the 11 core results
-                val_loss_hist, val_acc_hist, val_f1_hist, val_auc_hist, iter_cost, walltime, grad_norms, ln, test_metrics, steps_per_epoch, train_metrics_run = results_to_unpack
+                # Unpack core results with backward compatibility (11, 14, or 17 core items)
+                core = results_to_unpack
+                core_len = len(core)
+                if core_len < 11:
+                    raise ValueError(f"Unexpected number of core results from train_experiment for {opt}: {core_len}. Expected at least 11.")
+
+                val_loss_hist = core[0]
+                val_acc_hist = core[1]
+                val_f1_hist = core[2]
+                val_auc_hist = core[3]
+                iter_cost = core[4]
+                walltime = core[5]
+                grad_norms = core[6]
+                pos = 7
+
+                # Optional layer/component runtimes (present in 14+ item payloads)
+                layer_runtime_history = None
+                layer_bwd_runtime_history = None
+                component_runtime_history = None
+                if core_len >= 14:
+                    layer_runtime_history = core[pos]; pos += 1
+                    layer_bwd_runtime_history = core[pos]; pos += 1
+                    component_runtime_history = core[pos]; pos += 1
+
+                layer_names = core[pos]; pos += 1
+                test_metrics = core[pos]; pos += 1
+                steps_per_epoch = core[pos]; pos += 1
+                train_metrics_run = core[pos]; pos += 1
+
+                # Optional iteration-level logging triplet
+                iteration_logs = None
+                validation_walltimes = None
+                epoch_end_walltimes = None
+                remaining = core_len - pos
+                if remaining >= 3:
+                    iteration_logs = core[pos]; pos += 1
+                    validation_walltimes = core[pos]; pos += 1
+                    epoch_end_walltimes = core[pos]; pos += 1
+                # Assign layer_names to ln and run_layer_names for downstream usage
+                ln = layer_names
+                run_layer_names = layer_names
 
                 # Store settings if fetched
                 if run_specific_settings_value:
@@ -156,7 +212,7 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
                         for key, value in run_specific_settings_value.items():
                             if key != 'optimizer_params': 
                                 collected_settings[key] = value
-                    
+                        
                     # Store/update optimizer-specific parameters
                     if 'optimizer_params' in run_specific_settings_value:
                         if 'optimizer_params' not in collected_settings:
@@ -184,19 +240,27 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
             if val_loss_hist is None or test_metrics is None or steps_per_epoch is None:
                  raise ValueError(f"Experiment run for optimizer {opt} (Run {run_idx+1}) failed to return valid results (check steps_per_epoch).") # Include run_idx in error
 
-            # Store history from this run
-            all_runs_val_losses[opt].append(val_loss_hist)
-            all_runs_val_accs[opt].append(val_acc_hist)
-            all_runs_val_f1s[opt].append(val_f1_hist)
-            all_runs_val_aucs[opt].append(val_auc_hist)
-            all_runs_iter_costs[opt].append(iter_cost)
-            all_runs_walltimes[opt].append(walltime)
-            all_runs_gradients[opt].append(grad_norms)
-            all_runs_steps_per_epoch[opt].append(steps_per_epoch) 
-            all_runs_train_losses[opt].append(train_metrics_run.get('train_loss', []))
-            all_runs_train_accs[opt].append(train_metrics_run.get('train_accuracy', []))
-            all_runs_train_f1s[opt].append(train_metrics_run.get('train_f1_score', []))
-            all_runs_train_aucs[opt].append(train_metrics_run.get('train_auc', []))
+            # Store history from this run (append backward layer timings too)
+            if val_loss_hist is not None:
+                all_runs_val_losses[opt].append(val_loss_hist)
+                all_runs_val_accs[opt].append(val_acc_hist)
+                all_runs_val_f1s[opt].append(val_f1_hist)
+                all_runs_val_aucs[opt].append(val_auc_hist)
+                all_runs_iter_costs[opt].append(iter_cost)
+                all_runs_walltimes[opt].append(walltime)
+                all_runs_gradients[opt].append(grad_norms)
+                all_runs_layer_runtimes[opt].append(layer_runtime_history)
+                # store backward timings
+                all_runs_layer_runtimes_back[opt].append(layer_bwd_runtime_history)
+                # store component histories
+                all_runs_component_runtimes[opt].append(component_runtime_history)
+                all_runs_steps_per_epoch[opt].append(steps_per_epoch)
+
+                # Store training history
+                all_runs_train_losses[opt].append(train_metrics_run['train_loss'])
+                all_runs_train_accs[opt].append(train_metrics_run.get('train_accuracy', []))
+                all_runs_train_f1s[opt].append(train_metrics_run.get('train_f1_score', []))
+                all_runs_train_aucs[opt].append(train_metrics_run.get('train_auc', []))
             run_layer_names = ln 
 
             # Store final test metrics for this run
@@ -210,7 +274,17 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
                 "test_eval_time_seconds": test_metrics.get('eval_time_seconds', np.nan)
             }
             all_runs_test_results.append(test_result_row)
+            # Store optional iteration-level logging structures per run
+            if 'iteration_logs' in locals() and iteration_logs is not None:
+                all_runs_iteration_logs[opt].append(iteration_logs)
+            if 'validation_walltimes' in locals() and validation_walltimes is not None:
+                all_runs_validation_walltimes[opt].append(validation_walltimes)
+            if 'epoch_end_walltimes' in locals() and epoch_end_walltimes is not None:
+                all_runs_epoch_end_walltimes[opt].append(epoch_end_walltimes)
         # End of inner loop (runs per optimizer)
+        # Capture layer names from first optimizer/run to use in plotting
+        if all_layer_names is None and run_layer_names is not None:
+            all_layer_names = run_layer_names
 
         # --- Averaging Validation Metrics Across Runs ---
         loss_stats = calculate_statistics(all_runs_val_losses[opt])
@@ -500,25 +574,6 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
     with open(os.path.join(results_dir, f"raw_runs_validation_data_{plot_filename}.json"), 'w') as f:
         json.dump(raw_runs_data, f, default=lambda x: list(x) if isinstance(x, np.ndarray) else str(x))
 
-    # --- Save Validation Metrics CSV (Averaged) ---
-    df_metrics_with_err = []
-    for opt in optimizer_names:
-        for i in range(epochs):
-            row = {
-                "optimizer": opt,
-                "epoch": i + 1,
-                "val_loss": val_losses[opt][i] if i < len(val_losses[opt]) else None,
-                "val_accuracy": val_accs[opt][i] if i < len(val_accs[opt]) else None,
-                "val_f1_score": val_f1s[opt][i] if i < len(val_f1s[opt]) else None,
-                "val_auc": val_aucs[opt][i] if i < len(val_aucs[opt]) else None,
-                "val_loss_std_err": loss_std_err[opt][i] if i < len(loss_std_err[opt]) else None,
-                "val_accuracy_std_err": acc_std_err[opt][i] if i < len(acc_std_err[opt]) else None,
-                "val_f1_score_std_err": f1_std_err[opt][i] if i < len(f1_std_err[opt]) else None,
-                "val_auc_std_err": auc_std_err[opt][i] if i < len(auc_std_err[opt]) else None
-            }
-            df_metrics_with_err.append(row)
-    pd.DataFrame(df_metrics_with_err).to_csv(os.path.join(results_dir, csv_filename), index=False)
-
     # --- Save Training Metrics CSV (Averaged) ---
     df_train_metrics_with_err = []
     for opt in optimizer_names:
@@ -555,6 +610,118 @@ def run_experiments(train_experiment, results_dir, visuals_dir, epochs,
     elif resource_tracking_available and resource_df is None:
          print("Warning: resource_df was None, skipping resource usage plotting.")
 
+    # --- Plot Layer-wise Runtime Breakdown ---
+    if all_layer_names is not None:
+        plot_layer_runtime_breakdown(
+            all_runs_layer_runtimes,
+            all_layer_names,
+            visuals_dir,
+            f"Layer-wise Runtime Breakdown for {base_experiment_name}"
+        )
+        # Plot forward vs backward breakdown
+        plot_forward_backward_runtime_breakdown(
+            all_runs_layer_runtimes,
+            all_runs_layer_runtimes_back,
+            all_layer_names,
+            visuals_dir,
+            f"Forward vs Backward Runtime Breakdown for {base_experiment_name}"
+        )
+
+    # --- Plot Accuracy/Runtime and Loss/Runtime Ratios ---
+    try:
+        # Compute avg runtime per optimizer from wall_results
+        avg_runtime = {opt: (wall_results.get(opt, [])[-1] if wall_results.get(opt) else np.nan) for opt in optimizer_names}
+        # Compute final val accuracy and loss
+        final_acc = {opt: val_accs.get(opt, [np.nan])[-1] for opt in optimizer_names}
+        final_loss = {opt: val_losses.get(opt, [np.nan])[-1] for opt in optimizer_names}
+        # Compute ratios
+        acc_runtime_ratio = {opt: final_acc[opt] / avg_runtime[opt] if avg_runtime[opt] else np.nan for opt in optimizer_names}
+        loss_runtime_ratio = {opt: final_loss[opt] / avg_runtime[opt] if avg_runtime[opt] else np.nan for opt in optimizer_names}
+        # Plot
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4))
+        ax1.bar(acc_runtime_ratio.keys(), acc_runtime_ratio.values())
+        ax1.set_title(f"Accuracy/Runtime Ratio for {base_experiment_name}")
+        ax1.set_ylabel('Acc (%) per sec')
+        ax1.set_xticklabels(list(acc_runtime_ratio.keys()), rotation=45)
+        ax2.bar(loss_runtime_ratio.keys(), loss_runtime_ratio.values())
+        ax2.set_title(f"Loss/Runtime Ratio for {base_experiment_name}")
+        ax2.set_ylabel('Loss per sec')
+        ax2.set_xticklabels(list(loss_runtime_ratio.keys()), rotation=45)
+        plt.tight_layout()
+        ratio_plot_path = os.path.join(visuals_dir, f"accuracy_loss_runtime_ratio_{experiment_file_id}.png")
+        fig.savefig(ratio_plot_path)
+        plt.close(fig)
+        print(f"Saved accuracy/loss-runtime ratio plot to {ratio_plot_path}")
+    except Exception as e:
+        print(f"Warning: Failed to plot accuracy/loss runtime ratios: {e}")
+
+    # --- Save Raw Layer Runtime Histories ---
+    try:
+        raw_runtime_data = {}
+        for opt in optimizer_names:
+            raw_runtime_data[opt] = {
+                'forward': all_runs_layer_runtimes.get(opt, []),
+                'backward': all_runs_layer_runtimes_back.get(opt, [])
+            }
+        json_path = os.path.join(results_dir, f"{experiment_file_id}_layer_runtimes.json")
+        with open(json_path, 'w') as jf:
+            json.dump(raw_runtime_data, jf, indent=4)
+        print(f"Saved raw layer runtime histories to {json_path}")
+    except Exception as e:
+        print(f"Warning: Failed to save raw layer runtime histories: {e}")
+    # --- Plot Component-level Runtimes per Epoch ---
+    try:
+        comp_names = ['forward', 'backward', 'optimizer', 'overhead']
+        # Prepare data structures
+        for comp in comp_names:
+            comp_mean = {}
+            comp_err = {}
+            for opt in optimizer_names:
+                # collect list of per-run arrays
+                runs_comp = [run[comp] for run in all_runs_component_runtimes.get(opt, [])]
+                stats = calculate_statistics(runs_comp)
+                comp_mean[opt] = stats['mean'] if stats else []
+                comp_err[opt] = stats['std_err'] if stats else []
+            # Plot
+            plot_seaborn_style_with_error_bars(
+                comp_mean,
+                comp_err,
+                range(1, epochs+1),
+                f"{comp.title()} Runtime per Epoch for {base_experiment_name}",
+                f"{comp}_runtime_epoch_{experiment_file_id}",
+                f"{comp.title()} Time (s)",
+                visuals_dir,
+                xlabel="Epoch"
+            )
+    except Exception as e:
+        print(f"Warning: Failed to plot component-level runtimes: {e}")
+
+    # --- Save Iteration-level Logs (if available) ---
+    try:
+        # Only save if any optimizer has data
+        has_iteration_logs = any(all_runs_iteration_logs.get(opt) for opt in optimizer_names)
+        if has_iteration_logs:
+            iter_log_path = os.path.join(results_dir, f"{experiment_file_id}_iteration_logs.json")
+            payload = {
+                'iteration_logs': all_runs_iteration_logs,
+                'validation_walltimes': all_runs_validation_walltimes,
+                'epoch_end_walltimes': all_runs_epoch_end_walltimes,
+            }
+            with open(iter_log_path, 'w') as jf:
+                json.dump(payload, jf, default=lambda x: list(x) if isinstance(x, np.ndarray) else x)
+            print(f"Saved iteration-level logs to {iter_log_path}")
+    except Exception as e:
+        print(f"Warning: Failed to save iteration-level logs: {e}")
+
+    # --- Save Final Test Results (per-run) ---
+    try:
+        if all_runs_test_results:
+            test_df = pd.DataFrame(all_runs_test_results)
+            test_csv_path = os.path.join(results_dir, f"{experiment_file_id}_final_test_results.csv")
+            test_df.to_csv(test_csv_path, index=False)
+            print(f"Saved final test results to {test_csv_path}")
+    except Exception as e:
+        print(f"Warning: Failed to save final test results CSV: {e}")
 
     # Return averaged validation metrics history (optional, maybe not needed by caller)
     return val_losses, val_accs, val_f1s, val_aucs, iter_results, wall_results

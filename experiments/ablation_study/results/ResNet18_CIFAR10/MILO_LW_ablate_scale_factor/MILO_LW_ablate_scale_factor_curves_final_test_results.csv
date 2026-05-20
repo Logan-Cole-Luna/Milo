@@ -1,0 +1,7 @@
+optimizer,run,test_loss,test_accuracy,test_f1_score,test_auc,test_eval_time_seconds
+MILO_LW_scale_factor_0.2,1,,,,,
+MILO_LW_scale_factor_0.2,2,,,,,
+MILO_LW_scale_factor_0.1,1,,,,,
+MILO_LW_scale_factor_0.1,2,,,,,
+MILO_LW_scale_factor_0.5,1,,,,,
+MILO_LW_scale_factor_0.5,2,,,,,

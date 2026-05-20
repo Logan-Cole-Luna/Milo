@@ -9,38 +9,52 @@ import json
 from scipy import stats
 import time
 import random 
+import torch.distributed as dist
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(os.path.dirname(__file__))  
 from experiments.RL.point_navigation_env import PointNavigationEnv 
 from milo import milo
+from novograd import NovoGrad
+from adalayer import Adalayer
+from adam_mini import Adam_mini
+from muon import MuonWithAuxAdam
+from ademamix_pytorch import AdEMAMix
+
 from network import ComplexPolicyNetwork
 from experiments.hyperparameter_tuning_utils import tune_hyperparameters
-from config import (
-    GAMMA, GRADIENT_CLIP, MAX_STEPS, EPISODES 
-)
-from experiments.utils.resource_tracker import ResourceTracker, save_resource_info
-resource_tracking_available = True
-from experiments.experiment_runner import (perform_statistical_tests, 
-                                                    save_statistics_report,
-                                                    save_experimental_settings)
-from scipy import stats
-stats_functions_available = True
+
+# Resource tracking utilities
+try:
+    from experiments.utils.resource_tracker import ResourceTracker, save_resource_info
+    resource_tracking_available = True
+except ImportError:
+    resource_tracking_available = False
+
+# Statistical test and settings save utilities
+try:
+    from experiments.experiment_runner import perform_statistical_tests, save_statistics_report, save_experimental_settings
+    stats_functions_available = True
+except ImportError:
+    stats_functions_available = False
+
+# RL plotting functions
 from experiments.RL.plotting import (
     plot_training_rewards_with_error,
-    plot_training_losses_with_error, plot_success_rates, 
-    plot_averaged_trajectories_topdown, plot_averaged_trajectories_3d, 
-    plot_iteration_cost, plot_walltime_cost
+    plot_training_losses_with_error,
+    plot_success_rates,
+    plot_averaged_trajectories_topdown,
+    plot_averaged_trajectories_3d,
+    plot_iteration_cost,
+    plot_walltime_cost
 )
 
 from config import (
-    GAMMA, EPISODES, LOG_INTERVAL, START_POS, GOAL_POS,
+    LEARNING_RATE, GAMMA, EPISODES, LOG_INTERVAL, START_POS, GOAL_POS,
     INITIAL_EXPLORATION, FINAL_EXPLORATION, EXPLORATION_DECAY, GRADIENT_CLIP,
     DISTANCE_THRESHOLD, RANDOM_GOAL, MAX_STEPS, PARAM_GRID,
     OPTIMIZER_PARAMS, NUM_RUNS, CSV_FILENAME, OPTIMIZERS
 )
-
-from novograd import NovoGrad
 
 # Set base_dir based on RANDOM_GOAL flag
 if RANDOM_GOAL:
@@ -56,6 +70,9 @@ os.makedirs(results_dir, exist_ok=True)
 # Create directory for statistics
 stats_dir = os.path.join(base_dir, 'statistics')
 os.makedirs(stats_dir, exist_ok=True)
+
+# Avoid global monkey-patching that can affect other code. We'll apply a local
+# single-process shim around MUON training only.
 
 def select_action(model, state, exploration_noise):
     """Select action from policy with exploration noise"""
@@ -211,26 +228,29 @@ def run_experiment(optimizer_name, run_idx=0):
     tuning_num_trials = 10       # Number of Optuna trials per optimizer
 
     print(f"Starting hyperparameter tuning for {optimizer_name} ({tuning_num_trials} trials)...")
-    best_hyperparams = tune_hyperparameters(
-        model_fn=lambda: ComplexPolicyNetwork(env.observation_space, env.action_space),
-        optimizer_names=[optimizer_name],
-        param_grid=PARAM_GRID,
-        device=torch.device('cpu'), # Assuming CPU for tuning, adjust if needed
-        experiment_name="RL",
-        task_type="rl", # *** Correct task type ***
-        epochs=tuning_episodes_per_trial, # Use 'epochs' to mean training episodes per trial
-        num_trials=tuning_num_trials,
-        # SL args (set to None for RL)
-        train_loader=None,
-        val_ratio=None,
-        criterion=None,
-        # RL args
-        env_fn=create_tuning_env, # Pass the function to create env instances
-        gamma=GAMMA, 
-        clip_grad=GRADIENT_CLIP,
-        episodes_to_eval=tuning_eval_episodes, 
-        max_steps_per_episode=MAX_STEPS 
-    )[optimizer_name]
+    # Skip hyperparameter tuning for custom optimizers
+    if optimizer_name.upper() in {"MUON", "ADALAYER", "ADAM_MINI"}:
+        print(f"Skipping hyperparameter tuning for {optimizer_name}, using default parameters.")
+        best_hyperparams = {}
+    else:
+        best_hyperparams = tune_hyperparameters(
+            model_fn=lambda: ComplexPolicyNetwork(env.observation_space, env.action_space),
+            optimizer_names=[optimizer_name],
+            param_grid=PARAM_GRID,
+            device=torch.device('cpu'),
+            experiment_name="RL",
+            task_type="rl",
+            epochs=tuning_episodes_per_trial,
+            num_trials=tuning_num_trials,
+            train_loader=None,
+            val_ratio=None,
+            criterion=None,
+            env_fn=create_tuning_env,
+            gamma=GAMMA,
+            clip_grad=GRADIENT_CLIP,
+            episodes_to_eval=tuning_eval_episodes,
+            max_steps_per_episode=MAX_STEPS
+        )[optimizer_name]
     
     print(f"Finished tuning. Using best hyperparameters for {optimizer_name}: {best_hyperparams}")
     
@@ -263,6 +283,8 @@ def run_experiment(optimizer_name, run_idx=0):
                 del best_hyperparams['betas'] # Remove invalid entry
 
     params.update(best_hyperparams) # Update with tuned params
+    # Extract learning rate from params or use default
+    lr_value = params.pop('lr', LEARNING_RATE)
     
     # Store experimental settings (using the final 'params' dictionary)
     settings = {
@@ -310,6 +332,14 @@ def run_experiment(optimizer_name, run_idx=0):
         optimizer_class = milo 
     elif optimizer_name_upper == "NOVOGRAD":
         optimizer_class = NovoGrad
+    elif optimizer_name_upper == "ADALAYER":
+        optimizer_class = Adalayer
+    elif optimizer_name_upper == "ADAM_MINI":
+        optimizer_class = Adam_mini
+    elif optimizer_name_upper == "ADEMAMIX":
+        optimizer_class = AdEMAMix
+    elif optimizer_name_upper == "MUON":
+        optimizer_class = MuonWithAuxAdam
     # Standard PyTorch optimizers (check explicitly by uppercase name)
     elif optimizer_name_upper == "ADAM":
         optimizer_class = torch.optim.Adam
@@ -340,7 +370,77 @@ def run_experiment(optimizer_name, run_idx=0):
          raise ValueError(f"Optimizer class for '{optimizer_name}' could not be determined.")
 
     # Create the optimizer instance using the assigned class and parameters
-    optimizer = optimizer_class(model.parameters(), **params)
+    if optimizer_name_upper == "MUON":
+        # Apply a local distributed shim for single-process
+        muon_shim_applied = False
+        originals = {}
+        if dist.is_available():
+            try:
+                originals['get_world_size'] = getattr(dist, 'get_world_size', None)
+                originals['get_rank'] = getattr(dist, 'get_rank', None)
+                originals['all_gather'] = getattr(dist, 'all_gather', None)
+                originals['is_initialized'] = getattr(dist, 'is_initialized', None)
+                dist.get_world_size = lambda group=None: 1
+                dist.get_rank = lambda group=None: 0
+                def _fake_all_gather(tensor_list, tensor, group=None, async_op=False):
+                    for i in range(len(tensor_list)):
+                        tensor_list[i].copy_(tensor)
+                    return None
+                dist.all_gather = _fake_all_gather
+                dist.is_initialized = lambda group=None: False
+                muon_shim_applied = True
+            except Exception:
+                muon_shim_applied = False
+
+        if hasattr(model, 'body') and hasattr(model, 'head') and hasattr(model, 'embed'):
+            hidden_weights = [p for p in model.body.parameters() if p.ndim >= 2]
+            hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
+            nonhidden_params = [*model.head.parameters(), *model.embed.parameters()]
+            param_groups = [
+                dict(params=hidden_weights, use_muon=True, lr=lr_value, weight_decay=params.get('weight_decay', 0)),
+                dict(params=hidden_gains_biases + nonhidden_params, use_muon=False, lr=lr_value, betas=params.get('betas', None), weight_decay=params.get('weight_decay', 0)),
+            ]
+        else:
+            hidden_weights = [p for _, p in model.named_parameters() if p.ndim >= 2]
+            other_params = [p for _, p in model.named_parameters() if p.ndim < 2]
+            param_groups = [
+                dict(params=hidden_weights, use_muon=True, lr=lr_value, weight_decay=params.get('weight_decay', 0)),
+                dict(params=other_params, use_muon=False, lr=lr_value, betas=params.get('betas', None), weight_decay=params.get('weight_decay', 0)),
+            ]
+        optimizer = MuonWithAuxAdam(param_groups)
+        # Wrap optimizer with a small proxy to restore shims after training in this function
+        class _ShimRestorer:
+            def __init__(self, opt, applied, originals):
+                self.opt = opt
+                self.applied = applied
+                self.originals = originals
+            def __getattr__(self, name):
+                return getattr(self.opt, name)
+            def restore(self):
+                if self.applied and dist.is_available():
+                    try:
+                        if self.originals.get('get_world_size') is not None:
+                            dist.get_world_size = self.originals['get_world_size']
+                        if self.originals.get('get_rank') is not None:
+                            dist.get_rank = self.originals['get_rank']
+                        if self.originals.get('all_gather') is not None:
+                            dist.all_gather = self.originals['all_gather']
+                        if self.originals.get('is_initialized') is not None:
+                            dist.is_initialized = self.originals['is_initialized']
+                    except Exception:
+                        pass
+        optimizer = _ShimRestorer(optimizer, muon_shim_applied, originals)
+    elif optimizer_name_upper == "ADAM_MINI":
+        # Adam-mini expects named parameters; filter to weight matrices (ndim>=2) to avoid 1D bias errors
+        named_params = [(name, param) for name, param in model.named_parameters() if param.ndim >= 2]
+        optimizer = Adam_mini(named_parameters=named_params, lr=lr_value, **params)
+    elif optimizer_name_upper == "ADALAYER":
+        # Adalayer expects parameters and learning rate
+        optimizer = Adalayer(model.parameters(), lr=lr_value, **params)
+    elif optimizer_name_upper == "ADEMAMIX":
+        optimizer = AdEMAMix(model.parameters(), lr=lr_value, **params)
+    else:
+        optimizer = optimizer_class(model.parameters(), lr=lr_value, **params)
 
     total_rewards = []
     trajectories = []
@@ -378,6 +478,9 @@ def run_experiment(optimizer_name, run_idx=0):
             print(f"Episode {episode}: Reward = {reward:.2f}, Avg Reward = {avg_reward:.2f}, Loss = {episode_loss:.6f}, Exploration = {exploration_noise:.4f}, {success_status}")
     
     env.close()
+    # Restore MUON shims if applied via proxy wrapper
+    if optimizer_name_upper == "MUON" and hasattr(optimizer, 'restore'):
+        optimizer.restore()
     
     # Stop resource tracking and collect info
     resource_info = None
@@ -401,7 +504,7 @@ def eval_model_trials(model, num_trials=10):
         num_trials: Number of evaluation trials to run.
 
     Returns:
-        tuple: List of trajectories, success rate, list of rewards.
+        tuple: List of trajectories, success rate, list of rewards, success_count.
     """
     trajectories = []
     success_count = 0
@@ -442,7 +545,7 @@ def eval_model_trials(model, num_trials=10):
     success_rate = success_count / num_trials
     print(f"Success rate: {success_rate:.2%} ({success_count}/{num_trials})")
     
-    return trajectories, success_rate, rewards
+    return trajectories, success_rate, rewards, success_count
 
 if __name__ == '__main__':
     """Main execution block for RL experiments."""
@@ -458,6 +561,7 @@ if __name__ == '__main__':
         # torch.backends.cudnn.benchmark = False
 
     optimizer_names = OPTIMIZERS
+    EVAL_TRIALS = 5  # number of evaluation trials per run
     # Dictionaries to store data across runs
     all_runs_rewards = {opt: [] for opt in optimizer_names}
     all_runs_episode_losses = {opt: [] for opt in optimizer_names} # Renamed for clarity
@@ -465,6 +569,8 @@ if __name__ == '__main__':
     all_runs_step_times = {opt: [] for opt in optimizer_names} # Store step times per run
     all_runs_step_iterations = {opt: [] for opt in optimizer_names} # Store step iterations per run
     all_eval_trajectories = {opt: [] for opt in optimizer_names}
+    all_eval_rewards = {opt: [] for opt in optimizer_names}
+    all_eval_success_counts = {opt: [] for opt in optimizer_names}
     all_success_rates = {opt: [] for opt in optimizer_names}
     all_resource_info = []  # Store resource information
     all_settings = {opt: {} for opt in optimizer_names}  # Store experimental settings
@@ -493,7 +599,7 @@ if __name__ == '__main__':
             model, rewards, final_traj, episode_losses, step_losses, step_times, step_iterations, resource_info, settings = run_experiment(opt, run)
             
             # Evaluate the model with fixed common goal
-            eval_trajectories, success_rate, _ = eval_model_trials(model, num_trials=5)
+            eval_trajectories, success_rate, eval_rewards, success_count = eval_model_trials(model, num_trials=EVAL_TRIALS)
             
             # Store results for this run temporarily
             opt_run_rewards.append(rewards)
@@ -502,6 +608,8 @@ if __name__ == '__main__':
             opt_run_step_times.append(step_times)
             opt_run_step_iterations.append(step_iterations)
             all_eval_trajectories[opt].extend(eval_trajectories) # Keep extending eval trajectories
+            all_eval_rewards[opt].append(eval_rewards)
+            all_eval_success_counts[opt].append(success_count)
             opt_run_success_rates.append(success_rate)
 
             # Store resource info if available
@@ -618,8 +726,18 @@ if __name__ == '__main__':
         resource_csv_path = os.path.join(results_dir, "compute_resources_rl.csv")
         save_resource_info(all_resource_info, resource_csv_path)
     
-    # Calculate average success rates for plotting
+    # Calculate average success rates for plotting (mean across runs)
     avg_success_rates = {opt: np.mean(all_success_rates[opt]) for opt in optimizer_names}
+    # Aggregate success over all trials and runs
+    agg_trial_success_rate = {
+        opt: (np.sum(all_eval_success_counts[opt]) / (len(all_eval_success_counts[opt]) * EVAL_TRIALS)) if all_eval_success_counts[opt] else 0.0
+        for opt in optimizer_names
+    }
+    # Average eval reward over all trials and runs
+    avg_eval_reward = {
+        opt: (np.mean([r for run in all_eval_rewards[opt] for r in run]) if all_eval_rewards[opt] else 0.0)
+        for opt in optimizer_names
+    }
     
     # --- Plotting --- 
     print("\nGenerating plots...")
@@ -693,7 +811,10 @@ if __name__ == '__main__':
         'losses': {opt: [list(run) for run in all_runs_episode_losses[opt]] for opt in optimizer_names},
         'step_losses': {opt: [list(run) for run in all_runs_step_losses[opt]] for opt in optimizer_names},
         'step_times': {opt: [list(run) for run in all_runs_step_times[opt]] for opt in optimizer_names},
-        'success_rates': {opt: all_success_rates[opt] for opt in optimizer_names}
+        'success_rates': {opt: all_success_rates[opt] for opt in optimizer_names},
+        'eval_rewards_per_run': {opt: [list(run) for run in all_eval_rewards[opt]] for opt in optimizer_names},
+        'eval_success_counts_per_run': {opt: [int(x) for x in all_eval_success_counts[opt]] for opt in optimizer_names},
+        'eval_trials_per_run': EVAL_TRIALS
     }
     
     with open(os.path.join(results_dir, "raw_rl_runs_data.json"), 'w') as f:
@@ -703,7 +824,16 @@ if __name__ == '__main__':
     csv_path = os.path.join(results_dir, CSV_FILENAME)
     with open(csv_path, mode='w', newline='') as csv_file:
         csv_writer = csv.writer(csv_file)
-        headers = ["Optimizer", "Avg Reward", "Success Rate", "Success Rate Std Err", "Avg Final Loss", "Compute Time (s)"]
+        headers = [
+            "Optimizer",
+            "Avg Reward",
+            "Success Rate (runs mean)",
+            "Success Rate Std Err",
+            "Agg Success Rate (trials)",
+            "Avg Eval Reward (trials)",
+            "Avg Final Loss",
+            "Compute Time (s)"
+        ]
         csv_writer.writerow(headers)
         
         for opt in optimizer_names:
@@ -711,6 +841,8 @@ if __name__ == '__main__':
             success_rate = avg_success_rates[opt]
             success_std_err = success_stats[opt]['std_err'] if stats_functions_available else 0
             avg_final_loss = np.mean([run[-1] for run in all_runs_episode_losses[opt]])
+            agg_sr = agg_trial_success_rate[opt]
+            avg_eval_rew = avg_eval_reward[opt]
             
             # Get compute time if available
             compute_time = "-"
@@ -719,7 +851,7 @@ if __name__ == '__main__':
                 if opt_resources:
                     compute_time = np.mean([r.get('duration_seconds', 0) for r in opt_resources])
                     
-            csv_writer.writerow([opt, avg_reward, success_rate, success_std_err, avg_final_loss, compute_time])
+            csv_writer.writerow([opt, avg_reward, success_rate, success_std_err, agg_sr, avg_eval_rew, avg_final_loss, compute_time])
     
     print(f"\nResults saved to {csv_path}")
     print(f"Plots saved to {visuals_dir}")

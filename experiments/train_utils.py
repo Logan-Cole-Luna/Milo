@@ -10,8 +10,11 @@ import psutil
 from sklearn.metrics import f1_score, roc_auc_score, accuracy_score
 from scipy import stats
 import json
+import warnings
+import platform as _platform
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+# Suppress the PyTorch full backward hook warning globally to avoid the runtime warning message
+warnings.filterwarnings("ignore", ".*Full backward hook is firing.*")
 
 def get_layer_names(model):
     """
@@ -135,7 +138,7 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
     """
     Generic training loop with validation at each epoch.
     Returns validation metrics, cumulative wall times, gradient norms, iteration costs, the trained model,
-    steps per epoch, and training metrics.
+    steps per epoch, training metrics, and detailed iteration-level logs.
     
     Args:
         model: The model to train.
@@ -149,9 +152,21 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
         layer_names: An optional list of layer names for gradient norm tracking.
         
     Returns:
-        tuple: A tuple containing validation metrics history, cumulative wall times, 
-               gradient norms history, iteration costs, the trained model, 
-               steps per epoch, and training metrics history.
+        tuple: A 13-element tuple containing:
+            - val_metrics_hist: Dictionary with epoch-level validation metrics
+            - cumulative_times: List of cumulative wall times per epoch
+            - gradient_norms_history: Dictionary of gradient norms per layer
+            - iter_costs: List of training losses per iteration
+            - layer_runtime_history: Forward pass timing per layer
+            - layer_bwd_runtime_history: Backward pass timing per layer  
+            - component_runtime_history: Component-level timing
+            - model: The trained model
+            - steps_per_epoch: Number of steps per epoch
+            - train_metrics_hist: Dictionary with epoch-level training metrics
+            - iteration_logs: Dictionary with step-level data (step_numbers, epoch_numbers, 
+                            batch_losses, cumulative_walltime, batch_walltime, learning_rates, batch_sizes)
+            - validation_walltimes: List of cumulative wall times at validation points
+            - epoch_end_walltimes: List of cumulative wall times at end of each epoch
     """
     val_metrics_hist = {'epoch': [], 'val_loss': [], 'val_accuracy': [], 'val_f1_score': [], 'val_auc': []}
     train_metrics_hist = {'epoch': [], 'train_loss': [], 'train_accuracy': [], 'train_f1_score': [], 'train_auc': []}
@@ -161,6 +176,100 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
 
     iter_costs = []  # Store training loss per iteration
     iter_times = []   # Store time per iteration
+    
+    # NEW: Detailed iteration-level logging
+    iteration_logs = {
+        'step_numbers': [],           # Global step counter
+        'epoch_numbers': [],          # Which epoch each step belongs to
+        'batch_losses': [],           # Loss for each mini-batch
+        'cumulative_walltime': [],    # Cumulative time since training start
+        'batch_walltime': [],         # Time taken for each batch
+        'learning_rates': [],         # Learning rate at each step
+        'batch_sizes': []             # Actual batch size (may vary for last batch)
+    }
+    
+    # NEW: Validation walltime tracking
+    validation_walltimes = []  # Walltime when each validation occurred
+    epoch_end_walltimes = []   # Walltime when each epoch ended
+    
+    global_step = 0
+    
+    # Setup component-level timing
+    fwd_times = []
+    bwd_times = []
+    opt_times = []
+    overhead_times = []
+    component_runtime_history = {'forward': [], 'backward': [], 'optimizer': [], 'overhead': []}
+
+    # Setup per-layer runtime measurement
+    if layer_names:
+        # Prepare timers and counts for forward
+        timers = {layer: 0.0 for layer in layer_names}
+        counts = {layer: 0 for layer in layer_names}
+        # History per epoch for forward
+        layer_runtime_history = {layer: [] for layer in layer_names}
+        hook_data = {}
+        hooks = []
+        # Prepare timers and counts for backward
+        bwd_timers = {layer: 0.0 for layer in layer_names}
+        bwd_counts = {layer: 0 for layer in layer_names}
+        # History per epoch for backward
+        layer_bwd_runtime_history = {layer: [] for layer in layer_names}
+        bwd_hook_data = {}
+        # Define hook factories
+        def make_pre_hook(layer):
+            def pre_hook(module, inputs):
+                hook_data[layer] = time.time()
+            return pre_hook
+        def make_post_hook(layer):
+            def post_hook(module, inputs, output):
+                start = hook_data.get(layer)
+                if start is not None:
+                    elapsed = time.time() - start
+                    timers[layer] += elapsed
+                    counts[layer] += 1
+            return post_hook
+        def make_bwd_pre_hook(layer):
+            def pre_bwd_hook(module, *args):
+                # args can be (grad_input,) or (grad_input, grad_output)
+                bwd_hook_data[layer] = time.time()
+            return pre_bwd_hook
+        def make_bwd_post_hook(layer):
+            def post_bwd_hook(module, grad_input, grad_output):
+                start = bwd_hook_data.get(layer)
+                if start is not None:
+                    elapsed = time.time() - start
+                    bwd_timers[layer] += elapsed
+                    bwd_counts[layer] += 1
+            return post_bwd_hook
+        # Register hooks on top-level modules
+        is_windows = (_platform.system() == 'Windows')
+        for layer in layer_names:
+            module = getattr(model, layer, None)
+            # Register hooks only on submodules (skip Tensors/Parameters like cls_token/pos_embed)
+            if module is not None and isinstance(module, torch.nn.Module):
+                # Forward timing hooks
+                hooks.append(module.register_forward_pre_hook(make_pre_hook(layer)))
+                hooks.append(module.register_forward_hook(make_post_hook(layer)))
+                # Register backward timing hooks only if module has trainable parameters
+                # On Windows, skip full backward hooks to avoid potential autograd hangs.
+                if not is_windows:
+                    if any(hasattr(module, 'parameters') and p.requires_grad for p in module.parameters()):
+                        try:
+                            hooks.append(module.register_full_backward_pre_hook(make_bwd_pre_hook(layer)))
+                            hooks.append(module.register_full_backward_hook(make_bwd_post_hook(layer)))
+                        except AttributeError:
+                            # Fallback for older PyTorch: register backward hook (may not support pre-hook)
+                            try:
+                                hooks.append(module.register_backward_hook(lambda mod, grad_in, grad_out: None))
+                                print(f"Warning: Full backward hooks not supported; backward timing may be unavailable for layer {layer}.")
+                            except Exception:
+                                pass
+    else:
+        layer_runtime_history = None
+        layer_bwd_runtime_history = None
+     
+    steps_per_epoch = 0
 
     for epoch in range(1, epochs + 1):
         epoch_start = time.time()
@@ -169,23 +278,76 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
         num_train_batches = 0
 
         for inputs, targets in train_loader:
-            iter_start_time = time.time()
+            # Batch start
+            batch_start = time.time()
+            global_step += 1
+            batch_size = targets.size(0)
+            
             inputs, targets = inputs.to(device), targets.to(device)
-
             optimizer.zero_grad()
+            
+            # Forward pass timing
+            fwd_start = time.time()
             outputs = model(inputs)
             loss = criterion(outputs, targets)
+            fwd_elapsed = time.time() - fwd_start
+            fwd_times.append(fwd_elapsed)
+            
+            # Backward pass timing
+            bwd_start = time.time()
             loss.backward()
+            bwd_elapsed = time.time() - bwd_start
+            bwd_times.append(bwd_elapsed)
+            
+            # Optimizer step timing
+            opt_start = time.time()
             optimizer.step()
+            opt_elapsed = time.time() - opt_start
+            opt_times.append(opt_elapsed)
+            
+            # Overhead (data movement, other calls)
+            overhead_elapsed = time.time() - batch_start - (fwd_elapsed + bwd_elapsed + opt_elapsed)
+            overhead_times.append(overhead_elapsed)
 
             running_train_loss += loss.item()
             num_train_batches += 1
 
+            # Original iteration tracking
             iter_costs.append(loss.item())
-            iter_elapsed_time = time.time() - iter_start_time
+            iter_elapsed_time = time.time() - batch_start
             iter_times.append(iter_elapsed_time)
+            
+            # NEW: Detailed iteration logging
+            cumulative_time = time.time() - training_start
+            
+            # Get current learning rate
+            if hasattr(optimizer, 'param_groups'):
+                current_lr = optimizer.param_groups[0]['lr']
+            else:
+                current_lr = None
+                
+            iteration_logs['step_numbers'].append(global_step)
+            iteration_logs['epoch_numbers'].append(epoch)
+            iteration_logs['batch_losses'].append(loss.item())
+            iteration_logs['cumulative_walltime'].append(cumulative_time)
+            iteration_logs['batch_walltime'].append(iter_elapsed_time)
+            iteration_logs['learning_rates'].append(current_lr)
+            iteration_logs['batch_sizes'].append(batch_size)
 
         # --- Calculate Training Metrics for the Epoch ---
+        # Record component-level average runtimes for this epoch
+        if fwd_times:
+            component_runtime_history['forward'].append(sum(fwd_times)/len(fwd_times))
+            component_runtime_history['backward'].append(sum(bwd_times)/len(bwd_times))
+            component_runtime_history['optimizer'].append(sum(opt_times)/len(opt_times))
+            component_runtime_history['overhead'].append(sum(overhead_times)/len(overhead_times))
+        else:
+            # No iterations, append zeros
+            for key in component_runtime_history:
+                component_runtime_history[key].append(0.0)
+        # Reset iteration component lists
+        fwd_times.clear(); bwd_times.clear(); opt_times.clear(); overhead_times.clear()
+
         avg_train_loss = running_train_loss / num_train_batches if num_train_batches > 0 else 0
         train_eval_metrics = evaluate_model(model, train_loader, criterion, device) # Evaluate on train set
         train_loss = train_eval_metrics['loss'] # Use evaluated loss for consistency
@@ -201,7 +363,10 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
         # --- End Training Metrics Calculation ---
 
         # --- Calculate Validation Metrics ---
+        validation_start_time = time.time() - training_start  # Walltime when validation starts
         val_metrics = evaluate_model(model, val_loader, criterion, device)
+        validation_end_time = time.time() - training_start    # Walltime when validation ends
+        
         val_loss = val_metrics['loss']
         val_accuracy = val_metrics['accuracy']
         val_f1 = val_metrics['f1_score']
@@ -218,6 +383,30 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
                 else:
                     gradient_norms_history[layer].append(0.0) 
 
+        # Record layer runtimes for this epoch
+        if layer_names:
+            for layer in layer_names:
+                if counts[layer] > 0:
+                    avg_time = timers[layer] / counts[layer]
+                else:
+                    avg_time = 0.0
+                layer_runtime_history[layer].append(avg_time)
+            # Reset forward timers and counts for next epoch
+            for layer in layer_names:
+                timers[layer] = 0.0
+                counts[layer] = 0
+            # Record backward runtimes for this epoch
+            for layer in layer_names:
+                if bwd_counts[layer] > 0:
+                    avg_bwd = bwd_timers[layer] / bwd_counts[layer]
+                else:
+                    avg_bwd = 0.0
+                layer_bwd_runtime_history[layer].append(avg_bwd)
+            # Reset backward timers and counts
+            for layer in layer_names:
+                bwd_timers[layer] = 0.0
+                bwd_counts[layer] = 0
+
         epoch_elapsed = time.time() - epoch_start
         epoch_times.append(epoch_elapsed)
 
@@ -233,6 +422,10 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
         val_metrics_hist['val_accuracy'].append(val_accuracy)
         val_metrics_hist['val_f1_score'].append(val_f1)
         val_metrics_hist['val_auc'].append(val_auc)
+        
+        # NEW: Track validation walltime
+        validation_walltimes.append(validation_start_time)
+        epoch_end_walltimes.append(time.time() - training_start)
 
         # Update print statement
         print(f"Epoch {epoch}/{epochs}, "
@@ -243,7 +436,26 @@ def run_training(model, train_loader, val_loader, optimizer, criterion, device, 
     cumulative_times = list(np.cumsum(iter_times))
     steps_per_epoch = len(train_loader) 
     print(f"Total training time: {total_time:.2f} seconds")
-    return val_metrics_hist, cumulative_times, gradient_norms_history, iter_costs, model, steps_per_epoch, train_metrics_hist
+    # Remove hooks
+    if layer_names:
+        for h in hooks:
+            h.remove()
+    # Return including per-layer and component-level runtime history
+    return (
+        val_metrics_hist,
+        cumulative_times,
+        gradient_norms_history,
+        iter_costs,
+        layer_runtime_history,
+        layer_bwd_runtime_history,
+        component_runtime_history,
+        model,
+        steps_per_epoch,
+        train_metrics_hist,
+        iteration_logs,
+        validation_walltimes,
+        epoch_end_walltimes
+    )
 
 # Function to print system hardware info
 def print_system_info():

@@ -1,0 +1,112 @@
+{
+  "model": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "model_architecture": {
+    "fc1.weight": [
+      128,
+      784
+    ],
+    "fc1.bias": [
+      128
+    ],
+    "fc2.weight": [
+      10,
+      128
+    ],
+    "fc2.bias": [
+      10
+    ],
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "batch_size": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "dataset": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "criterion": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "device": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "validation_split_ratio": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "test_split_ratio": {
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "optimizer_params": {
+    "MILO": {
+      "verbose_profile": false,
+      "normalize": true,
+      "layer_wise": false,
+      "scale_aware": false,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "use_cuda_kernels": true,
+      "normalize_interval": 1
+    },
+    "MILO_LW": {
+      "normalize": true,
+      "layer_wise": true,
+      "scale_aware": false,
+      "scale_factor": 0.2,
+      "nesterov": false,
+      "adaptive": true,
+      "momentum": 0.9,
+      "profile_time": false,
+      "max_group_size": null,
+      "use_cached_mapping": true,
+      "foreach": true,
+      "use_cuda_kernels": true,
+      "normalize_interval": 1
+    },
+    "SGD": {
+      "momentum": 0.9,
+      "nesterov": true,
+      "weight_decay": 0.0001
+    },
+    "ADAMW": {
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.01
+    },
+    "experiment_title": "MULTILAYER Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  }
+}

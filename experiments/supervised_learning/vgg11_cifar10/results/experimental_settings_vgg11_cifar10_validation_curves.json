@@ -1,0 +1,252 @@
+{
+  "model": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "model_architecture": {
+    "features.0.weight": [
+      64,
+      3,
+      3,
+      3
+    ],
+    "features.0.bias": [
+      64
+    ],
+    "features.1.weight": [
+      64
+    ],
+    "features.1.bias": [
+      64
+    ],
+    "features.4.weight": [
+      128,
+      64,
+      3,
+      3
+    ],
+    "features.4.bias": [
+      128
+    ],
+    "features.5.weight": [
+      128
+    ],
+    "features.5.bias": [
+      128
+    ],
+    "features.8.weight": [
+      256,
+      128,
+      3,
+      3
+    ],
+    "features.8.bias": [
+      256
+    ],
+    "features.9.weight": [
+      256
+    ],
+    "features.9.bias": [
+      256
+    ],
+    "features.11.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "features.11.bias": [
+      256
+    ],
+    "features.12.weight": [
+      256
+    ],
+    "features.12.bias": [
+      256
+    ],
+    "features.15.weight": [
+      512,
+      256,
+      3,
+      3
+    ],
+    "features.15.bias": [
+      512
+    ],
+    "features.16.weight": [
+      512
+    ],
+    "features.16.bias": [
+      512
+    ],
+    "features.18.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "features.18.bias": [
+      512
+    ],
+    "features.19.weight": [
+      512
+    ],
+    "features.19.bias": [
+      512
+    ],
+    "features.22.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "features.22.bias": [
+      512
+    ],
+    "features.23.weight": [
+      512
+    ],
+    "features.23.bias": [
+      512
+    ],
+    "features.25.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "features.25.bias": [
+      512
+    ],
+    "features.26.weight": [
+      512
+    ],
+    "features.26.bias": [
+      512
+    ],
+    "classifier.0.weight": [
+      4096,
+      512
+    ],
+    "classifier.0.bias": [
+      4096
+    ],
+    "classifier.3.weight": [
+      4096,
+      4096
+    ],
+    "classifier.3.bias": [
+      4096
+    ],
+    "classifier.6.weight": [
+      10,
+      4096
+    ],
+    "classifier.6.bias": [
+      10
+    ],
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "batch_size": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "dataset": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "criterion": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "device": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "validation_split_ratio": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "test_split_ratio": {
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "optimizer_params": {
+    "MILO": {
+      "momentum": 0.8694336270468448,
+      "eps": 1.5575676132644753e-08,
+      "adaptive_eps": 4.893709818313241e-10,
+      "weight_decay": 0.0016624611768341249,
+      "clip_norm": 2.0
+    },
+    "MILO_LW": {
+      "momentum": 0.8390607556808392,
+      "scale_factor": 0.10480841914592168,
+      "eps": 1.0713173657654728e-06,
+      "adaptive_eps": 1.458112066065236e-07,
+      "weight_decay": 0.0028354284930546428,
+      "clip_norm": 5.0,
+      "scale_aware": true
+    },
+    "SGD": {
+      "momentum": 0.6802819218116132,
+      "weight_decay": 0.0009202508313877014
+    },
+    "ADAMW": {
+      "weight_decay": 0.0011465848176775743,
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "eps": 4.3435001048568884e-08
+    },
+    "ADAM_MINI": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.0012100914287998445
+    },
+    "NOVOGRAD": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.0021381873048398354
+    },
+    "ADAGRAD": {
+      "lr_decay": 0.05173779507858518,
+      "weight_decay": 0.004952425566131277,
+      "eps": 1.2016256756829941e-09
+    },
+    "ADEMAMIX": {
+      "betas": [
+        0.9,
+        0.999,
+        0.9999
+      ],
+      "alpha": 6.015468596814142,
+      "weight_decay": 0.00023179996890167163,
+      "eps": 4.049567990910911e-10
+    },
+    "experiment_title": "VGG11_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  }
+}

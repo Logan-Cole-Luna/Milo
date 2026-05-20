@@ -209,8 +209,6 @@ def plot_training_rewards_with_error(all_rewards, rewards_std_err, optimizer_nam
             if plot_err_vals is not None:
                  err_series = pd.Series(plot_err_vals)
                  plot_err_vals = err_series.rolling(window=smoothing_window, min_periods=1).mean().to_numpy()
-            # Title already includes "Smoothed"
-            current_title += " (Smoothed)"
 
         # Plot line (smoothed or original) with appropriate marker
         marker = MARKERS[i % len(MARKERS)]

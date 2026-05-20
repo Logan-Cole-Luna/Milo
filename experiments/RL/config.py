@@ -56,13 +56,13 @@ FINAL_EXPLORATION = 0.01
 EXPLORATION_DECAY = 0.998
 GRADIENT_CLIP = 0.5
 DISTANCE_THRESHOLD = 0.05
-RANDOM_GOAL = False 
+RANDOM_GOAL = True 
 MAX_STEPS = 500
 NUM_RUNS = 5
 CSV_FILENAME = "rl_results.csv"
 
 # --- Optimizers to Use ---
-OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAGRAD", "NOVOGRAD"]
+OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAM_MINI", "NOVOGRAD", "ADAGRAD", "ADEMAMIX"]
 
 # --- Parameter Grids for Hyperparameter Tuning ---
 PARAM_GRID = {
@@ -99,6 +99,17 @@ PARAM_GRID = {
         #'weight_decay': (1e-6, 1e-2, 'log'),            
         #'momentum': (0.0, 0.99)
     }
+    ,
+    'ADEMAMIX': {
+        # Provide a conservative search space for RL
+        #'lr': (1e-4, 5e-3, 'log'),
+        #'betas': [(0.9, 0.999, 0.9999), (0.95, 0.999, 0.9999)],
+        #'alpha': (2.0, 10.0),
+        #'weight_decay': (1e-5, 1e-2, 'log'),
+        #'eps': (1e-10, 1e-6, 'log'),
+        #'beta3_warmup': [0, 100, 500],
+        #'alpha_warmup': [0, 100, 500]
+    }
 }
 
 # --- Optimizer Parameter Settings (Unified Base) ---
@@ -119,7 +130,9 @@ OPTIMIZER_PARAMS = {
         "profile_time": False,
         'max_group_size': None,
         "use_cached_mapping": False,
-        "foreach": True
+        "foreach": False,
+        'use_cuda_kernels': True
+        
     },
     "MILO_LW": {
         #"lr": 0.05,
@@ -134,11 +147,30 @@ OPTIMIZER_PARAMS = {
         "profile_time": False,
         'max_group_size': None,
         "use_cached_mapping": True,
-        "foreach": True
+        "foreach": False,
+        'use_cuda_kernels': True
     },
     "NOVOGRAD": {
         "betas": (0.9, 0.99),
         "weight_decay": 0.001,
         "grad_averaging": True
+    },
+    "ADAM_MINI": {
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
+        "weight_decay": 0.0
+    },
+    "ADEMAMIX": {
+        "betas": (0.9, 0.999, 0.9999),
+        "alpha": 8.0,
+        "eps": 1e-8,
+        "weight_decay": 0.0,
+        "beta3_warmup": 0,
+        "alpha_warmup": 0
+    },
+    "MUON": {
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
+        "weight_decay": 0.01
     }
 }

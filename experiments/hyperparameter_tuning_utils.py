@@ -8,6 +8,7 @@ import optuna  # Import Optuna
 import numpy as np # Ensure numpy is imported
 # Add imports needed for RL evaluation
 import gymnasium as gym 
+import torch.distributed as dist
 # Assuming select_action and train_episode logic might be needed or adapted
 # If those are complex, might need to import them or replicate simplified versions.
 # For now, let's assume a simplified RL training/evaluation loop within the function.
@@ -16,6 +17,10 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from milo import milo
 from novograd import NovoGrad
+from adam_mini import Adam_mini
+from ademamix_pytorch import AdEMAMix
+# from muon import MuonWithAuxAdam
+from soap import SOAP
 from torch.utils.data import random_split, DataLoader
 
 # --- Add RL Evaluation Function ---
@@ -125,9 +130,22 @@ def objective(trial, model_fn, optimizer_name, param_grid,
         optimizer_class = milo
     elif optimizer_name_upper == "MILO_LW":
         optimizer_class = milo
+    elif optimizer_name_upper == "MILO_TUNED":
+        optimizer_class = milo
+    elif optimizer_name_upper == "MILO_LW_TUNED":
+        optimizer_class = milo
     elif optimizer_name_upper == "NOVOGRAD":
         optimizer_class = NovoGrad
+    elif optimizer_name_upper == "ADAM_MINI":
+        optimizer_class = Adam_mini
+    elif optimizer_name_upper == "ADEMAMIX":
+        optimizer_class = AdEMAMix
+    #elif optimizer_name_upper == "MUON":
+    #    optimizer_class = MuonWithAuxAdam
+    elif optimizer_name_upper == "SOAP":
+        optimizer_class = SOAP
     else:
+        # pytorch optimizers
         try:
             if optimizer_name_upper == "SGD":
                 optimizer_class = torch.optim.SGD
@@ -145,28 +163,110 @@ def objective(trial, model_fn, optimizer_name, param_grid,
         except AttributeError:
             raise ValueError(f"Optimizer '{optimizer_name}' not found in torch.optim or custom optimizers.")
 
+    optimizer = None
     try:
-        optimizer = optimizer_class(model.parameters(), **params)
+        # Special-case for Adam_mini (expects named_parameters)
+        if optimizer_name_upper == "ADAM_MINI":
+            # Filter out 3D parameters (e.g., ViT cls_token/pos_embed) which some implementations
+            # of Adam-mini don't handle due to reshape assumptions; also freeze them.
+            is_vit_like = any(hasattr(model, attr) for attr in ("cls_token", "pos_embed"))
+            def _adam_mini_named_params(m):
+                for n, p in m.named_parameters():
+                    if is_vit_like:
+                        if p.ndim != 1:
+                            try:
+                                p.requires_grad = False
+                            except Exception:
+                                pass
+                            print(f"ADAM_MINI (tuning): [ViT] Skipping {n} shape {tuple(p.shape)} (ndim={p.ndim})")
+                            continue
+                        yield n, p
+                    else:
+                        if p.ndim >= 3:
+                            try:
+                                p.requires_grad = False
+                            except Exception:
+                                pass
+                            print(f"ADAM_MINI (tuning): Skipping {n} shape {tuple(p.shape)} (ndim={p.ndim})")
+                            continue
+                        yield n, p
+            optimizer = optimizer_class(named_parameters=_adam_mini_named_params(model), **params)
+            # Skip transformer annotations for ViT to avoid head reshaping assumptions
+            try:
+                if not is_vit_like:
+                    if hasattr(optimizer, 'output_names'):
+                        optimizer.output_names.update({'head'})
+                    if hasattr(optimizer, 'wqk_names'):
+                        optimizer.wqk_names.update({'qkv', 'attn.qkv', 'q', 'k'})
+                    if hasattr(optimizer, 'wv_names'):
+                        optimizer.wv_names.update({'v', 'qkv'})
+            except Exception:
+                pass
+        else:
+            # Generic optimizer creation for all other optimizers
+            if optimizer_name_upper == "MUON":
+                # Create param groups: Muon expects split groups for matrix vs vector params
+                hidden_weights = [p for _, p in model.named_parameters() if p.ndim >= 2 and p.requires_grad]
+                other_params = [p for _, p in model.named_parameters() if p.ndim < 2 and p.requires_grad]
+                lr_val = params.pop('lr', 1e-3)
+                wd = params.get('weight_decay', 0)
+                betas = params.get('betas', None)
+                param_groups = [
+                    dict(params=hidden_weights, use_muon=True, lr=lr_val, weight_decay=wd),
+                    dict(params=other_params, use_muon=False, lr=lr_val, betas=betas, weight_decay=wd),
+                ]
+                optimizer = optimizer_class(param_groups)
+            else:
+                optimizer = optimizer_class(model.parameters(), **params)
     except TypeError as e:
         print(f"Error creating optimizer {optimizer_name} with params {params}: {e}")
         raise optuna.exceptions.TrialPruned() # Prune trial if optimizer creation fails
 
     # Train and evaluate based on task type
-    if task_type == "classification" or task_type == "regression":
-        # Use existing supervised learning evaluation
-        if not criterion: # Make sure criterion is passed for SL tasks
-             raise ValueError("Criterion must be provided for classification/regression tasks.")
-        metric = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, device, task_type, epochs)
-    elif task_type == "rl":
-        # Use the new RL evaluation function
-        if not env_fn:
-             raise ValueError("env_fn must be provided for RL tasks.")
-        # Use 'epochs' argument as the number of training episodes for the trial
-        episodes_to_train = epochs 
-        metric = train_and_evaluate_rl(model, optimizer, env_fn, device, gamma, clip_grad, 
-                                       episodes_to_train, episodes_to_eval, max_steps_per_episode)
-    else:
-        raise ValueError(f"Unknown task type: {task_type}")
+    # Apply MUON single-process distributed shims if needed
+    muon_shim_applied = False
+    originals = {}
+    try:
+        if optimizer_name_upper == "MUON" and dist.is_available():
+            try:
+                originals['get_world_size'] = getattr(dist, 'get_world_size', None)
+                originals['get_rank'] = getattr(dist, 'get_rank', None)
+                originals['is_initialized'] = getattr(dist, 'is_initialized', None)
+                dist.get_world_size = lambda group=None: 1
+                dist.get_rank = lambda group=None: 0
+                # Report not-initialized to avoid distributed collectives
+                dist.is_initialized = lambda group=None: False
+                muon_shim_applied = True
+            except Exception:
+                muon_shim_applied = False
+
+        if task_type == "classification" or task_type == "regression":
+            # Use existing supervised learning evaluation
+            if not criterion: # Make sure criterion is passed for SL tasks
+                 raise ValueError("Criterion must be provided for classification/regression tasks.")
+            metric = train_and_evaluate(model, train_loader, val_loader, optimizer, criterion, device, task_type, epochs)
+        elif task_type == "rl":
+            # Use the new RL evaluation function
+            if not env_fn:
+                 raise ValueError("env_fn must be provided for RL tasks.")
+            # Use 'epochs' argument as the number of training episodes for the trial
+            episodes_to_train = epochs 
+            metric = train_and_evaluate_rl(model, optimizer, env_fn, device, gamma, clip_grad, 
+                                           episodes_to_train, episodes_to_eval, max_steps_per_episode)
+        else:
+            raise ValueError(f"Unknown task type: {task_type}")
+    finally:
+        # Restore distributed funcs if we patched them
+        if muon_shim_applied:
+            try:
+                if originals.get('get_world_size') is not None:
+                    dist.get_world_size = originals['get_world_size']
+                if originals.get('get_rank') is not None:
+                    dist.get_rank = originals['get_rank']
+                if originals.get('is_initialized') is not None:
+                    dist.is_initialized = originals['is_initialized']
+            except Exception:
+                pass
 
     # Handle NaN or Inf results from evaluation to prune trial
     if np.isnan(metric) or np.isinf(metric):

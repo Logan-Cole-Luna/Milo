@@ -4,9 +4,23 @@ This script combines the functionality of logistic regression, multilayer neural
 and deep CNN experiments into a single framework.
 """
 import sys, os, argparse
-import random
-import numpy as np  
+# Prevent local scripts from shadowing installed optimizer packages
+if '' in sys.path:
+    sys.path.remove('')
+if os.getcwd() in sys.path:
+    sys.path.remove(os.getcwd())
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))  
+
+import random
+import numpy as np
+import torch
+import torch.nn as nn
+import seaborn as sns
+import time
+from matplotlib import rcParams
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader, random_split
+import torch.distributed as dist
 
 # Imports from existing experiments
 from experiments.train_utils import run_training, get_layer_names, evaluate_model
@@ -14,27 +28,44 @@ from experiments.experiment_runner import run_experiments
 from experiments.hyperparameter_tuning_utils import tune_hyperparameters
 
 # Import network models
-from network import LogisticRegressionModel, MLP, DeepCNN, ResNet18, ResNet34
+from experiments.supervised_learning.network import (
+    LogisticRegressionModel, MLP, DeepCNN, ResNet18, ResNet34, VGG11,
+)
 
 # Import optimizers and utilities
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader, random_split  
-from torchvision import datasets, transforms
-import seaborn as sns
-from matplotlib import rcParams
-from milo import milo
+from milo_accelerated import milo
 from novograd import NovoGrad
-import torch.optim  
-import time
+#from adalayer import Adalayer
+from adam_mini import Adam_mini
+from muon import MuonWithAuxAdam
+from ademamix_pytorch import AdEMAMix
+from soap import SOAP
 
 # Import configuration
-from config import (EXPERIMENTS, BATCH_SIZE, EPOCHS, LR, PARAM_GRID, OPTIMIZERS,
-                    OPTIMIZER_PARAMS, SCHEDULER_PARAMS, RUNS_PER_OPTIMIZER,
-                    EXPERIMENT_CONFIGS, TRIALS, VAL_SPLIT_RATIO, TEST_SPLIT_RATIO,
-                    PERFORM_HYPERPARAMETER_TUNING,  
-                    RESULTS_DIR_TUNING, VISUALS_DIR_TUNING,  
-                    RESULTS_DIR_NO_TUNING, VISUALS_DIR_NO_TUNING)  
+from experiments.supervised_learning.config import (
+    EXPERIMENTS,
+    BATCH_SIZE,
+    EPOCHS,
+    LR,
+    PARAM_GRID,
+    OPTIMIZERS,
+    OPTIMIZER_PARAMS,
+    SCHEDULER_PARAMS,
+    RUNS_PER_OPTIMIZER,
+    EXPERIMENT_CONFIGS,
+    TRIALS,
+    VAL_SPLIT_RATIO,
+    TEST_SPLIT_RATIO,
+    PERFORM_HYPERPARAMETER_TUNING,
+    RESULTS_DIR_TUNING,
+    VISUALS_DIR_TUNING,
+    RESULTS_DIR_NO_TUNING,
+    VISUALS_DIR_NO_TUNING,
+)  
+
+# Note: Avoid globally monkey-patching torch.distributed on Windows, as it can
+# cause hangs in unrelated code paths. If Muon is selected, we'll handle any
+# necessary single-process shims locally in that branch only.
 
 # --- Setup Visualization Style ---
 sns.set(style="whitegrid", context="paper")
@@ -79,6 +110,8 @@ def get_model(model_name, model_args={}):
         return ResNet18(**model_args)
     elif model_name == "ResNet34":
         return ResNet34(**model_args)
+    elif model_name == "VGG11":
+        return VGG11(**model_args)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
@@ -132,116 +165,197 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
         shuffle=False,  # No need to shuffle validation data
         num_workers=train_loader_instance.num_workers if hasattr(train_loader_instance, 'num_workers') else 0
     )
-    test_subset_loader = DataLoader(  # Create loader for the test subset
-        test_subset,
+    test_subset_loader = DataLoader(        test_subset,
         batch_size=train_loader_instance.batch_size,
-        shuffle=False,  # No need to shuffle test data
-        num_workers=train_loader_instance.num_workers if hasattr(train_loader_instance, 'num_workers') else 0
+        shuffle=False,        num_workers=train_loader_instance.num_workers if hasattr(train_loader_instance, 'num_workers') else 0
     )
 
     def train_experiment(optimizer_name, return_settings=False):
-        """Training function for the current experiment with specified optimizer."""
-        # Use the subset loaders created above
-        nonlocal train_subset_loader, val_loader_instance, test_subset_loader, experiment_type
-
-        # Create a new model instance for each call
+        """Train a model with a specified optimizer and return metrics."""
+        # Get experiment-specific configurations
         config = EXPERIMENT_CONFIGS[experiment_type]
-        model = get_model(config["model_name"], config["model_args"]).to(device)
-        criterion = nn.CrossEntropyLoss()
+        model_name = config["model_name"]
+        model_args = config["model_args"]
+        
+        # Instantiate the model
+        print("Training Device:", device)
+        model = get_model(model_name, model_args).to(device)
+        # Get layer names for gradient tracking
         layer_names = get_layer_names(model)
 
-        optimizer_upper = optimizer_name.upper()
+        # Define loss function
+        criterion = nn.CrossEntropyLoss()
+        
+        # Base learning rate for the experiment
+        base_lr = LR[experiment_type]
+        
+        # Optimizer parameters (exclude 'lr' to avoid passing it twice)
+        orig_optimizer_params = OPTIMIZER_PARAMS.get(optimizer_name, {})
+        optimizer_params = {k: v for k, v in orig_optimizer_params.items() if k != 'lr'}
 
-        # Hyperparameter tuning logic remains the same, but uses train_subset_loader and val_loader_instance
-        params = OPTIMIZER_PARAMS.get(optimizer_upper, {}).copy()
-        if 'lr' not in params:
-            if experiment_type in LR:
-                params['lr'] = LR[experiment_type]
+        # Select and instantiate the optimizer
+        muon_shim_applied = False
+        muon_dist_originals = {}
+        if optimizer_name == "MILO":
+            optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "MILO_LW":
+            optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "MILO_TUNED":
+            optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "MILO_LW_TUNED":
+            optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "SGD":
+            optimizer = torch.optim.SGD(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "ADAGRAD":
+            optimizer = torch.optim.Adagrad(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "ADAMW":
+            optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "NOVOGRAD":
+            optimizer = NovoGrad(model.parameters(), lr=base_lr, **optimizer_params)
+        #elif optimizer_name == "ADALAYER":
+        #    optimizer = Adalayer(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "ADAM_MINI":
+            # Adam-mini expects named parameters; architecture-aware safe filtering.
+            is_vit_like = any(hasattr(model, attr) for attr in ("cls_token", "pos_embed"))
+            def _adam_mini_named_params(m):
+                for n, p in m.named_parameters():
+                    if is_vit_like:
+                        # For ViT, only allow 1D tensors (bias, LayerNorm weights) to avoid reshape assumptions.
+                        if p.ndim != 1:
+                            try:
+                                p.requires_grad = False
+                            except Exception:
+                                pass
+                            print(f"ADAM_MINI: [ViT] Skipping {n} shape {tuple(p.shape)} (ndim={p.ndim})")
+                            continue
+                        yield n, p
+                    else:
+                        # Non-ViT: allow 1D/2D; skip >=3D (conv/embeddings)
+                        if p.ndim >= 3:
+                            try:
+                                p.requires_grad = False
+                            except Exception:
+                                pass
+                            print(f"ADAM_MINI: Skipping {n} shape {tuple(p.shape)} (ndim={p.ndim})")
+                            continue
+                        yield n, p
+            optimizer = Adam_mini(named_parameters=_adam_mini_named_params(model), lr=base_lr, **optimizer_params)
+            # Avoid transformer-specific annotations for ViT to prevent internal head reshaping
+            try:
+                if not is_vit_like:
+                    if hasattr(optimizer, 'output_names'):
+                        optimizer.output_names.add('head')
+                    if hasattr(optimizer, 'wqk_names'):
+                        optimizer.wqk_names.update({'qkv', 'attn.qkv', 'q', 'k'})
+                    if hasattr(optimizer, 'wv_names'):
+                        optimizer.wv_names.update({'v', 'qkv'})
+            except Exception:
+                pass
+        elif optimizer_name == "MUON":
+            # Muon optimizer: param grouping varies by model architecture
+            # Provide minimal single-process shims only for required collectives
+            # without globally changing torch.distributed state.
+            if dist.is_available():
+                try:
+                    muon_dist_originals['get_world_size'] = getattr(dist, 'get_world_size', None)
+                    muon_dist_originals['get_rank'] = getattr(dist, 'get_rank', None)
+                    muon_dist_originals['all_gather'] = getattr(dist, 'all_gather', None)
+                    muon_dist_originals['is_initialized'] = getattr(dist, 'is_initialized', None)
+                    dist.get_world_size = lambda group=None: 1
+                    dist.get_rank = lambda group=None: 0
+                    # Provide a local, no-op all_gather for single-process
+                    def _fake_all_gather(tensor_list, tensor, group=None, async_op=False):
+                        # Copy the input tensor into each slot of the list (world_size=1 -> one slot)
+                        for i in range(len(tensor_list)):
+                            tensor_list[i].copy_(tensor)
+                        return None
+                    dist.all_gather = _fake_all_gather
+                    # Report not-initialized to discourage other code paths
+                    dist.is_initialized = lambda group=None: False
+                    muon_shim_applied = True
+                except Exception:
+                    muon_shim_applied = False
+            if hasattr(model, 'body') and hasattr(model, 'head') and hasattr(model, 'embed'):
+                hidden_weights = [p for p in model.body.parameters() if p.ndim >= 2]
+                hidden_gains_biases = [p for p in model.body.parameters() if p.ndim < 2]
+                nonhidden_params = [*model.head.parameters(), *model.embed.parameters()]
+                param_groups = [
+                    dict(params=hidden_weights, use_muon=True, lr=0.02, weight_decay=0.01),
+                    dict(params=hidden_gains_biases + nonhidden_params, use_muon=False, lr=3e-4, betas=(0.9, 0.95), weight_decay=0.01),
+                ]
             else:
-                print(f"Warning: Learning rate for experiment type '{experiment_type}' not found. Using default.")
-
-        if PERFORM_HYPERPARAMETER_TUNING and optimizer_upper in PARAM_GRID and PARAM_GRID[optimizer_upper]: 
-            best_hyperparams = tune_hyperparameters(
-                model_fn=lambda: get_model(config["model_name"], config["model_args"]),
-                optimizer_names=[optimizer_name],
-                param_grid={optimizer_name: PARAM_GRID[optimizer_upper]},
-                train_loader=train_loader_instance,  # Pass original full train loader here
-                device=device,
-                experiment_name=experiment_type,
-                task_type="classification",
-                epochs=8,
-                num_trials=TRIALS,
-                val_ratio=VAL_SPLIT_RATIO,  # Use the config ratio for tuning validation
-                criterion=criterion 
-            )[optimizer_name]
-
-            if best_hyperparams:
-                print(f"Using best hyperparameters for {optimizer_name}: {best_hyperparams}")
-                params.update(best_hyperparams)
-            else:
-                print(f"No best hyperparameters found for {optimizer_name}, using defaults/dynamic LR.")
-
-        print(f"Final parameters for {optimizer_name} in {experiment_type}: {params}")
-
-        # Create optimizer
-        if optimizer_upper == "ADAGRAD":
-            optimizer = torch.optim.Adagrad(model.parameters(), **params)
-        elif optimizer_upper == "ADAMW":
-            optimizer = torch.optim.AdamW(model.parameters(), **params)
-        elif optimizer_upper == "SGD":
-            optimizer = torch.optim.SGD(model.parameters(), **params)
-        elif optimizer_upper == "MILO":
-            optimizer = milo(model.parameters(), **params)
-        elif optimizer_upper == "MILO_LW":
-            optimizer = milo(model.parameters(), **params)
-            
-            
-        elif optimizer_upper == "NOVOGRAD":
-            optimizer = NovoGrad(model.parameters(), **params)
+                hidden_weights = [p for _, p in model.named_parameters() if p.ndim >= 2]
+                other_params = [p for _, p in model.named_parameters() if p.ndim < 2]
+                param_groups = [
+                    dict(params=hidden_weights, use_muon=True, lr=base_lr, weight_decay=optimizer_params.get('weight_decay', 0)),
+                    dict(params=other_params, use_muon=False, lr=base_lr, betas=optimizer_params.get('betas', (0.9, 0.999)), weight_decay=optimizer_params.get('weight_decay', 0)),
+                ]
+            optimizer = MuonWithAuxAdam(param_groups)
+        elif optimizer_name == "ADEMAMIX":
+            optimizer = AdEMAMix(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "SOAP":
+            optimizer = SOAP(model.parameters(), lr=base_lr, **optimizer_params)
         else:
-            raise ValueError(f"Unknown optimizer: {optimizer_name}")
+            raise ValueError(f"Unsupported optimizer: {optimizer_name}")
 
-        # Set up scheduler
+        # Scheduler parameters
+        scheduler_info = SCHEDULER_PARAMS.get(optimizer_name, {"scheduler": "None"})
         scheduler = None
-        scheduler_config = SCHEDULER_PARAMS.get(optimizer_upper, {})
-        if scheduler_config and scheduler_config.get("scheduler") != "None":
-            scheduler_type = scheduler_config["scheduler"]
-            scheduler_params = scheduler_config["params"]
-            scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_type)
-            scheduler = scheduler_class(optimizer, **scheduler_params)
+        if scheduler_info["scheduler"] != "None":
+            scheduler_class = getattr(torch.optim.lr_scheduler, scheduler_info["scheduler"])
+            scheduler = scheduler_class(optimizer, **scheduler_info["params"])
 
         # Collect experimental settings
         settings = {
             "model": config["model_name"],
             "model_architecture": {layer: list(param.shape) for layer, param in model.named_parameters()},
-            "optimizer_params": params,
+            "optimizer_params": optimizer_params,
             "batch_size": BATCH_SIZE,
             "dataset": config["dataset_name"],
             "criterion": criterion.__class__.__name__,
             "device": str(device),
-            "scheduler_params": scheduler_config,
+            "scheduler_params": scheduler_info,
             "validation_split_ratio": VAL_SPLIT_RATIO,
             "test_split_ratio": TEST_SPLIT_RATIO 
         }
 
         # Run training using the train and validation subset loaders
         # Unpack steps_per_epoch and train_metrics_hist from the returned tuple
-        val_metrics, norm_walltimes, gradient_norms, iter_costs, trained_model, steps_per_epoch, train_metrics_hist = run_training(
-            model, train_subset_loader, val_loader_instance, optimizer, criterion, device, EPOCHS,
-            scheduler=scheduler, layer_names=layer_names
-        )
+        # Run training and capture layer-wise runtime history
+        try:
+            val_metrics, norm_walltimes, gradient_norms, iter_costs, \
+            layer_runtime_history, layer_bwd_runtime_history, component_runtime_history, \
+            trained_model, steps_per_epoch, train_metrics_hist, \
+            iteration_logs, validation_walltimes, epoch_end_walltimes = run_training(
+                model, train_subset_loader, val_loader_instance, optimizer, criterion, device, EPOCHS,
+                scheduler=scheduler, layer_names=layer_names
+            )
+        finally:
+            # Restore any MUON distributed shims if applied
+            if muon_shim_applied and dist.is_available():
+                try:
+                    if muon_dist_originals.get('get_world_size') is not None:
+                        dist.get_world_size = muon_dist_originals['get_world_size']
+                    if muon_dist_originals.get('get_rank') is not None:
+                        dist.get_rank = muon_dist_originals['get_rank']
+                    if muon_dist_originals.get('all_gather') is not None:
+                        dist.all_gather = muon_dist_originals['all_gather']
+                    if muon_dist_originals.get('is_initialized') is not None:
+                        dist.is_initialized = muon_dist_originals['is_initialized']
+                except Exception:
+                    pass
 
         # Final Test Evaluation
         print(f"Evaluating final model for {optimizer_name} on test subset...")
         test_start_time = time.time()
-        test_metrics = evaluate_model(trained_model, test_subset_loader, criterion, device) 
+        test_metrics = evaluate_model(trained_model, test_subset_loader, criterion, device)
         test_eval_time = time.time() - test_start_time
         print(f"Test Subset Evaluation Time: {test_eval_time:.2f}s")
-        print(f"Test Subset Results - Loss: {test_metrics['loss']:.4f}, Acc: {test_metrics['accuracy']:.2f}%, F1: {test_metrics['f1_score']:.4f}, AUC: {test_metrics['auc']:.4f}") 
+        print(f"Test Subset Results - Loss: {test_metrics['loss']:.4f}, Acc: {test_metrics['accuracy']:.2f}%, F1: {test_metrics['f1_score']:.4f}, AUC: {test_metrics['auc']:.4f}")
 
         test_metrics['eval_time_seconds'] = test_eval_time
 
-        # Return validation metrics history AND final test metrics AND steps_per_epoch
+        # Return metrics including layer-wise forward and backward runtime history and layer names
         result = (
             val_metrics['val_loss'],
             val_metrics['val_accuracy'],
@@ -250,10 +364,16 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
             iter_costs,
             norm_walltimes,
             gradient_norms,
+            layer_runtime_history,
+            layer_bwd_runtime_history,
+            component_runtime_history,
             layer_names,
             test_metrics,
             steps_per_epoch,
-            train_metrics_hist 
+            train_metrics_hist,
+            iteration_logs,
+            validation_walltimes,
+            epoch_end_walltimes
         )
 
         if return_settings:
@@ -320,6 +440,15 @@ def run_supervised_experiments(experiments_to_run=None):
     if experiments_to_run is None:
         experiments_to_run = EXPERIMENTS
     
+    # Flatten experiments list if it contains nested lists
+    flattened_experiments = []
+    for item in experiments_to_run:
+        if isinstance(item, list):
+            flattened_experiments.extend(item)
+        else:
+            flattened_experiments.append(item)
+    experiments_to_run = flattened_experiments
+    
     # Validate experiment names
     valid_experiments = set(EXPERIMENT_CONFIGS.keys())
     for exp in experiments_to_run[:]:
@@ -366,6 +495,28 @@ def run_supervised_experiments(experiments_to_run=None):
         os.makedirs(results_dir, exist_ok=True)
         os.makedirs(visuals_dir, exist_ok=True)
         
+        # Perform hyperparameter tuning if enabled
+        if PERFORM_HYPERPARAMETER_TUNING:
+            print(f"Tuning hyperparameters for {experiment_type}...")
+            # Tune on train_loader_instance, val split handled inside function
+            best_hps = tune_hyperparameters(
+                model_fn=lambda: get_model(config['model_name'], config['model_args']),
+                optimizer_names=OPTIMIZERS,
+                param_grid=PARAM_GRID,
+                device=device,
+                experiment_name=experiment_type,
+                task_type='classification',
+                epochs=EPOCHS,
+                num_trials=TRIALS,
+                train_loader=train_loader_instance,
+                val_ratio=VAL_SPLIT_RATIO,
+                criterion=nn.CrossEntropyLoss()
+            )
+            # Update optimizer defaults for subsequent runs
+            for opt_name, hp in best_hps.items():
+                if isinstance(hp, dict) and hp:
+                    OPTIMIZER_PARAMS[opt_name] = hp
+
         # Create training function for this experiment
         train_fn = create_train_experiment_fn(
             experiment_type, train_loader_instance

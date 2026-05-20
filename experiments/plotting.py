@@ -3,6 +3,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import os
+import matplotlib.colors as mcolors
 
 MARKERS = ['o', 's', 'X', 'P', 'D', '^', 'v', '<', '>', '*', '+']
 
@@ -350,3 +351,120 @@ def plot_seaborn_style_with_error_bars(
     plt.savefig(filepath_pdf, bbox_inches='tight')
     plt.close()
     print(f"Saved plot to {filepath_png} and {filepath_pdf}")
+
+
+def plot_layer_runtime_breakdown(
+    all_layer_runtimes: dict,
+    layer_names: list,
+    results_dir: str,
+    experiment_title: str = "Layer-wise Runtime Breakdown"
+):
+    """
+    Plot average per-layer forward-pass runtimes at final epoch for each optimizer.
+
+    Args:
+        all_layer_runtimes: dict mapping optimizer -> list of per-run history dicts {layer: [times per epoch]}
+        layer_names: list of layer names in order
+        results_dir: directory to save the plot
+        experiment_title: title for the plot
+    """
+    # Compute mean runtime at final epoch for each optimizer and layer
+    optimizer_names = list(all_layer_runtimes.keys())
+    num_layers = len(layer_names)
+    avg_times = {opt: [] for opt in optimizer_names}
+    for opt, runs in all_layer_runtimes.items():
+        # runs: list of history dicts per run
+        # For each layer, collect times at last epoch across runs
+        for layer in layer_names:
+            layer_vals = []
+            for run_hist in runs:
+                # run_hist: history list with avg times per epoch per layer, but stored as run_hist[layer] = list per epoch
+                if layer in run_hist and run_hist[layer]:
+                    layer_vals.append(run_hist[layer][-1])
+            avg_times[opt].append(sum(layer_vals)/len(layer_vals) if layer_vals else 0.0)
+    # Plotting
+    x = range(num_layers)
+    width = 0.8 / len(optimizer_names)
+    fig, ax = plt.subplots(figsize=(num_layers*0.5 + 2, 4))
+    for i, opt in enumerate(optimizer_names):
+        ax.bar([xi + i*width for xi in x], avg_times[opt], width=width, label=opt)
+    ax.set_xticks([xi + width*(len(optimizer_names)-1)/2 for xi in x])
+    ax.set_xticklabels(layer_names, rotation=45, ha='right')
+    ax.set_ylabel('Avg Forward Time (s)')
+    ax.set_title(experiment_title)
+    ax.legend()
+    plt.tight_layout()
+    os.makedirs(results_dir, exist_ok=True)
+    plot_path = os.path.join(results_dir, experiment_title.lower().replace(' ', '_') + '_layer_runtime.png')
+    fig.savefig(plot_path)
+    plt.close(fig)
+
+
+def plot_forward_backward_runtime_breakdown(
+    all_layer_runtimes_fwd: dict,
+    all_layer_runtimes_bwd: dict,
+    layer_names: list,
+    results_dir: str,
+    experiment_title: str = "Forward vs Backward Layer Runtime Breakdown"
+):
+    """
+    Plot average per-layer forward and backward-pass runtimes at final epoch for each optimizer.
+
+    Args:
+        all_layer_runtimes_fwd: dict mapping optimizer -> list of run history dicts {layer: [forward times per epoch]}
+        all_layer_runtimes_bwd: dict mapping optimizer -> list of run history dicts {layer: [backward times per epoch]}
+        layer_names: list of layer names in order
+        results_dir: directory to save the plot
+        experiment_title: title for the plot
+    """
+    optimizer_names = list(all_layer_runtimes_fwd.keys())
+    num_layers = len(layer_names)
+    # Compute mean times at final epoch
+    mean_fwd = {opt: [] for opt in optimizer_names}
+    mean_bwd = {opt: [] for opt in optimizer_names}
+    for opt in optimizer_names:
+        for layer in layer_names:
+            runs_f = all_layer_runtimes_fwd.get(opt, [])
+            runs_b = all_layer_runtimes_bwd.get(opt, [])
+            vals_f = [run[layer][-1] for run in runs_f if layer in run and run[layer]]
+            vals_b = [run[layer][-1] for run in runs_b if layer in run and run[layer]]
+            mean_fwd[opt].append(sum(vals_f)/len(vals_f) if vals_f else 0.0)
+            mean_bwd[opt].append(sum(vals_b)/len(vals_b) if vals_b else 0.0)
+    # Setup bar positions
+    x = np.arange(num_layers)
+    width = 0.8 / len(optimizer_names)
+    # Color palette for optimizers
+    palette = sns.color_palette("tab10", n_colors=len(optimizer_names))
+    opt_colors = {opt: palette[i] for i, opt in enumerate(optimizer_names)}
+    # Create plot with extra left margin for legend
+    fig, ax = plt.subplots(figsize=(num_layers*0.5 + 4, 4))
+    fig.subplots_adjust(left=0.25)
+    # Helper to lighten colors
+    def lighten(col, amount=0.5):
+        col_rgb = np.array(mcolors.to_rgb(col))
+        return tuple(col_rgb + (np.ones_like(col_rgb) - col_rgb) * amount)
+    # Plot bars
+    for i, opt in enumerate(optimizer_names):
+        base_color = opt_colors[opt]
+        dark_color = base_color
+        light_color = lighten(base_color, 0.6)
+        positions = x + i*width
+        fwd_vals = mean_fwd[opt]
+        bwd_vals = mean_bwd[opt]
+        bar_fwd = ax.bar(positions, fwd_vals, width=width, color=dark_color, label=opt)
+        ax.bar(positions, bwd_vals, width=width, bottom=fwd_vals, color=light_color)
+    # X-axis
+    ax.set_xticks(x + width*(len(optimizer_names)-1)/2)
+    ax.set_xticklabels(layer_names, rotation=45, ha='right')
+    ax.set_ylabel('Avg Time (s)')
+    ax.set_title(experiment_title)
+    # Legend on left
+    legend = ax.legend(title='Optimizer', loc='center left', bbox_to_anchor=(-0.25, 0.5))
+    # Save
+    plt.tight_layout()
+    os.makedirs(results_dir, exist_ok=True)
+    filename = experiment_title.lower().replace(' ', '_') + '_runtime_fb.png'
+    path = os.path.join(results_dir, filename)
+    fig.savefig(path)
+    plt.close(fig)
+    print(f"Saved forward/backward runtime breakdown plot to {path}")

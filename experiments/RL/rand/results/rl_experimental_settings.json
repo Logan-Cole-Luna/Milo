@@ -18,7 +18,8 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": false,
-      "foreach": true
+      "foreach": false,
+      "use_cuda_kernels": true
     },
     "environment": {
       "name": "PointNavigation3D",
@@ -70,7 +71,8 @@
       "profile_time": false,
       "max_group_size": null,
       "use_cached_mapping": true,
-      "foreach": true
+      "foreach": false,
+      "use_cuda_kernels": true
     },
     "environment": {
       "name": "PointNavigation3D",
@@ -194,7 +196,7 @@
     },
     "device": "cuda"
   },
-  "ADAGRAD": {
+  "ADAM_MINI": {
     "model": "ComplexPolicyNetwork",
     "model_architecture": {
       "total_parameters": 310787,
@@ -203,9 +205,12 @@
       "action_space": "Box(-0.6, 0.6, (3,), float32)"
     },
     "optimizer_params": {
-      "lr_decay": 0,
-      "weight_decay": 0.0,
-      "eps": 1e-08
+      "betas": [
+        0.9,
+        0.999
+      ],
+      "eps": 1e-08,
+      "weight_decay": 0.0
     },
     "environment": {
       "name": "PointNavigation3D",
@@ -253,6 +258,101 @@
       ],
       "weight_decay": 0.001,
       "grad_averaging": true
+    },
+    "environment": {
+      "name": "PointNavigation3D",
+      "start_position": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "goal_position": [
+        "1.0",
+        "1.0",
+        "1.0"
+      ],
+      "random_goal": true,
+      "distance_threshold": 0.05,
+      "max_steps": 500
+    },
+    "training_params": {
+      "gamma": 0.99,
+      "episodes": 500,
+      "gradient_clip": 0.5,
+      "initial_exploration": 0.2,
+      "final_exploration": 0.01,
+      "exploration_decay": 0.998
+    },
+    "tuning_params": {
+      "tuning_episodes_per_trial": 10,
+      "tuning_eval_episodes": 3,
+      "tuning_num_trials": 10
+    },
+    "device": "cuda"
+  },
+  "ADAGRAD": {
+    "model": "ComplexPolicyNetwork",
+    "model_architecture": {
+      "total_parameters": 310787,
+      "trainable_parameters": 310787,
+      "observation_space": "Box(-inf, inf, (6,), float32)",
+      "action_space": "Box(-0.6, 0.6, (3,), float32)"
+    },
+    "optimizer_params": {
+      "lr_decay": 0,
+      "weight_decay": 0.0,
+      "eps": 1e-08
+    },
+    "environment": {
+      "name": "PointNavigation3D",
+      "start_position": [
+        "0.0",
+        "0.0",
+        "0.0"
+      ],
+      "goal_position": [
+        "1.0",
+        "1.0",
+        "1.0"
+      ],
+      "random_goal": true,
+      "distance_threshold": 0.05,
+      "max_steps": 500
+    },
+    "training_params": {
+      "gamma": 0.99,
+      "episodes": 500,
+      "gradient_clip": 0.5,
+      "initial_exploration": 0.2,
+      "final_exploration": 0.01,
+      "exploration_decay": 0.998
+    },
+    "tuning_params": {
+      "tuning_episodes_per_trial": 10,
+      "tuning_eval_episodes": 3,
+      "tuning_num_trials": 10
+    },
+    "device": "cuda"
+  },
+  "ADEMAMIX": {
+    "model": "ComplexPolicyNetwork",
+    "model_architecture": {
+      "total_parameters": 310787,
+      "trainable_parameters": 310787,
+      "observation_space": "Box(-inf, inf, (6,), float32)",
+      "action_space": "Box(-0.6, 0.6, (3,), float32)"
+    },
+    "optimizer_params": {
+      "betas": [
+        0.9,
+        0.999,
+        0.9999
+      ],
+      "alpha": 8.0,
+      "eps": 1e-08,
+      "weight_decay": 0.0,
+      "beta3_warmup": 0,
+      "alpha_warmup": 0
     },
     "environment": {
       "name": "PointNavigation3D",

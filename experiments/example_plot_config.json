@@ -1,0 +1,55 @@
+{
+  "style": {
+    "figure_size": [12, 8],
+    "dpi": 300,
+    "font_size": 14,
+    "line_width": 2.5
+  },
+  "global": {
+    "xlimit": 10
+  },
+  "plot_metrics": [
+    "train_loss",
+    "train_accuracy",
+    "train_f1_score",
+    "train_auc"
+  ],
+  "metrics": {
+    "train_loss": {
+      "title": "MILO vs Competitors: Training Loss",
+      "ylabel": "Cross-Entropy Loss",
+      "yscale": null,
+      "ylimit": [0.2, 0.35],
+      "xlimit": null
+    },
+    "train_accuracy": {
+      "title": "MILO vs Competitors: Training Accuracy",
+      "ylabel": "Accuracy (%)",
+      "yscale": null,
+      "ylimit": [90, 94],
+      "xlimit": null
+    },
+    "train_f1_score": {
+      "title": "MILO vs Competitors: F1 Score",
+      "ylabel": "F1 Score",
+      "yscale": null,
+      "ylimit": [0.90, 0.95],
+      "xlimit": null
+    },
+    "train_auc": {
+      "title": "MILO vs Competitors: AUC Score",
+      "ylabel": "Area Under Curve",
+      "yscale": null,
+      "ylimit": [0.990, 0.996],
+      "xlimit": null
+    }
+  },
+  "include_optimizers": [
+    "MILO",
+    "MILO_LW", 
+    "MILO_TUNED",
+    "MILO_LW_TUNED",
+    "SGD"
+  ],
+  "exclude_optimizers": null
+}

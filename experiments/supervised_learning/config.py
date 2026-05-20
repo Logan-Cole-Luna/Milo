@@ -30,14 +30,26 @@ import os
 from torchvision import transforms
 
 # --- Experiment Settings ---
-# Options: ["LOGISTIC", "MULTILAYER", "DEEPCNN", "RESNET18"]
-EXPERIMENTS = [
-    "RESNET18"]
 
-PERFORM_HYPERPARAMETER_TUNING = True
+# Recommended experiment subsets for different purposes:
+FINAL_SUITE = ["VGG11_CIFAR10", "VGG11_CIFAR100"]
+#FINAL_SUITE = ["LOGISTIC", "MULTILAYER", "RESNET34_CIFAR10"]
+#FINAL_SUITE = ["LOGISTIC", "MULTILAYER", "RESNET34_CIFAR10", "RESNET34_CIFAR100", "VGG11_CIFAR10", "VGG11_CIFAR100"]
+
+
+EXPERIMENTS = [FINAL_SUITE] 
+
+# --- Optimizers to Use ---
+OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAGRAD", "ADEMAMIX", "SOAP"]
+#OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW"]
+#OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAM_MINI", "NOVOGRAD", "ADAGRAD", "ADEMAMIX"]
+#OPTIMIZERS = ["MUON"]
+
+
+PERFORM_HYPERPARAMETER_TUNING = False 
 BATCH_SIZE = 128
-EPOCHS = 10
-RUNS_PER_OPTIMIZER = 5
+EPOCHS = 5
+RUNS_PER_OPTIMIZER = 1
 
 TRIALS = 5 # Hyperparameter tuning trials
 VAL_SPLIT_RATIO = 0.15 
@@ -53,13 +65,24 @@ VISUALS_DIR_NO_TUNING = "visuals_nt"
 LR = {
     "LOGISTIC": 0.05,
     "MULTILAYER": 0.05,
+    "ADVANCED_MLP": 0.01,
+    "WIDE_MLP": 0.01,
     "DEEPCNN": 0.005,
+    "MODERN_CNN": 0.001,
+    "ATTENTION_CNN": 0.001,
+    "HYBRID_CNN_TRANSFORMER": 0.0005,
+    "WIDE_RESNET": 0.001,
+    "SIMPLE_VIT": 0.0005,
     "RESNET18": 0.005,
+    "RESNET34_CIFAR10": 0.001,
+    "RESNET34_CIFAR100": 0.001,
+    "VGG11_CIFAR10": 0.001,
+    "VGG11_CIFAR100": 0.001,
 }
 
-# --- Optimizers to Use ---
-OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAGRAD", "NOVOGRAD"]
 
+
+# "MILO_TUNED", "MILO_LW_TUNED",
 # --- Parameter Grids for Hyperparameter Tuning ---
 PARAM_GRID = {
     'SGD': {
@@ -85,15 +108,52 @@ PARAM_GRID = {
         'weight_decay': (0.0005, 0.01, 'log'),
         #'grad_averaging': [False, True],
     },
+    'ADALAYER': {
+        'lr': (0.001, 0.1, 'log'),
+        'betas': [(0.9, 0.98), (0.95, 0.999)],
+        'weight_decay': (1e-5, 1e-2, 'log'),
+    },
+    'ADAM_MINI': {
+        'lr': (0.001, 0.1, 'log'),
+        'betas': [(0.9, 0.98), (0.95, 0.999)],
+        'weight_decay': (1e-5, 1e-2, 'log'),
+    },
+    'MUON': {
+        'lr': (0.001, 0.1, 'log'),
+        'betas': [(0.9, 0.98), (0.95, 0.999)],
+        'weight_decay': (1e-5, 1e-2, 'log'),
+    },
+    'SOAP': {
+        'lr': (0.001, 0.01, 'log'),
+        'betas': [(0.9, 0.95), (0.95, 0.98)],
+        'weight_decay': (1e-4, 1e-2, 'log'),
+        'precondition_frequency': [5, 10, 20],
+        'eps': (1e-10, 1e-6, 'log'),
+    },
+    'ADEMAMIX': {
+        'lr': (0.0001, 0.01, 'log'),
+        'betas': [(0.9, 0.999, 0.9999), (0.95, 0.999, 0.9999)],
+        'alpha': (2.0, 10.0),
+        'weight_decay': (1e-4, 1e-1, 'log'),
+        'eps': (1e-10, 1e-6, 'log'),
+    },
     'MILO': {
-        #'lr': (0.005, 0.1),                    
-        #'weight_decay': (1e-6, 1e-2, 'log'),            
-        #'momentum': (0.0, 0.99)
+        'lr': (0.005, 0.1, 'log'),  # Learning rate with log-uniform distribution
+        'momentum': (0.8, 0.95),    # Momentum for gradient averaging
+        'eps': (1e-8, 1e-5, 'log'), # Numerical stability epsilon
+        'adaptive_eps': (1e-10, 1e-6, 'log'), # Adaptive scaling epsilon
+        'weight_decay': (1e-5, 1e-2, 'log'), # L2 regularization
+        'clip_norm': [None, 1.0, 2.0, 5.0], # Gradient clipping values
     },
     'MILO_LW': {
-        #'lr': (0.005, 0.1),                     
-        #'weight_decay': (1e-6, 1e-2, 'log'),            
-        #'momentum': (0.0, 0.99)
+        'lr': (0.005, 0.1, 'log'),  # Learning rate with log-uniform distribution
+        'momentum': (0.8, 0.95),    # Momentum for gradient averaging
+        'scale_factor': (0.1, 0.3), # Scale-aware normalization mixing factor
+        'eps': (1e-8, 1e-5, 'log'), # Numerical stability epsilon
+        'adaptive_eps': (1e-10, 1e-6, 'log'), # Adaptive scaling epsilon
+        'weight_decay': (1e-5, 1e-2, 'log'), # L2 regularization
+        'clip_norm': [None, 1.0, 2.0, 5.0], # Gradient clipping values
+        'scale_aware': [True, False], # Whether to use scale-aware normalization
     }
 }
 
@@ -103,25 +163,11 @@ OPTIMIZER_PARAMS = {
     "ADAGRAD": {"lr_decay": 0, "weight_decay": 0.0, "eps": 1e-10},
     "ADAMW": {"betas": (0.9, 0.999), "eps": 1e-8, "weight_decay": 0.01}, 
     "MILO": {
+        "verbose_profile": False,
         #"lr": 0.05,
         "normalize": True,
         "layer_wise": False,
-        "scale_aware": True,
-        "scale_factor": 0.2,
-        "nesterov": False,
-        "adaptive": True,
-        "momentum": 0.9,
-        #"weight_decay": 0.001,
-        "profile_time": False,
-        'max_group_size': None,
-        "use_cached_mapping": False,
-        "foreach": True
-    },
-    "MILO_LW": {
-        #"lr": 0.05,
-        "normalize": True,
-        "layer_wise": True,
-        "scale_aware": True,
+        "scale_aware": False,
         "scale_factor": 0.2,
         "nesterov": False,
         "adaptive": True,
@@ -130,13 +176,62 @@ OPTIMIZER_PARAMS = {
         "profile_time": False,
         'max_group_size': None,
         "use_cached_mapping": True,
-        "foreach": True
+        "foreach": True,
+        'use_cuda_kernels': False,
+        # Performance tuning: do normalization every N steps (1 = every step)
+        'normalize_interval': 1
+    },
+    "MILO_LW": {
+        #"lr": 0.05,
+        "normalize": True,
+        "layer_wise": True,
+        "scale_aware": False,
+        "scale_factor": 0.2,
+        "nesterov": False,
+        "adaptive": True,
+        "momentum": 0.9,
+        #"weight_decay": 0.001,
+        "profile_time": False,
+        'max_group_size': None,
+        "use_cached_mapping": True,
+        "foreach": True,
+        'use_cuda_kernels': False,
+        # Layer-wise normalization can be heavier; allow interval tuning
+        'normalize_interval': 1
     },
     "NOVOGRAD": {
         "betas": (0.9, 0.99),
         "weight_decay": 0.001,
         "grad_averaging": True
-    }
+    },
+    "ADAM_MINI": {
+        "betas": (0.9, 0.999), 
+        "eps": 1e-8, 
+        "weight_decay": 0
+        },
+    "MUON": {
+        "betas": (0.9, 0.999), 
+        "eps": 1e-8, 
+        "weight_decay": 0.01
+        },
+    "SOAP": {
+        "betas": (0.95, 0.95),
+        "weight_decay": 0.01,
+        "precondition_frequency": 10,
+        "max_precond_dim": 10000,
+        "merge_dims": False,
+        "precondition_1d": False,
+        "normalize_grads": False,
+        "eps": 1e-8
+    },
+    "ADEMAMIX": {
+        "betas": (0.9, 0.999, 0.9999),
+        "alpha": 8.0,
+        "weight_decay": 0.1,
+        "eps": 1e-8,
+        "beta3_warmup": 0,
+        "alpha_warmup": 0
+    },
 }
 
 # --- Scheduler Parameters (Unified) ---
@@ -181,12 +276,78 @@ EXPERIMENT_CONFIGS = {
         "cost_xlimit": None
     },
     
+    "ADVANCED_MLP": {
+        "model_name": "AdvancedMLP_Deep",
+        "dataset_name": "CIFAR10",
+        "model_args": {"input_dim": 32*32*3, "num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Lambda(lambda x: x.view(-1))
+        ]),
+        "plot_titles": {
+            "loss": "Advanced MLP: Loss vs. Epoch",
+            "accuracy": "Advanced MLP: Accuracy vs. Epoch", 
+            "f1": "Advanced MLP: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "WIDE_MLP": {
+        "model_name": "AdvancedMLP_Wide", 
+        "dataset_name": "CIFAR10",
+        "model_args": {"input_dim": 32*32*3, "num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            transforms.Lambda(lambda x: x.view(-1))
+        ]),
+        "plot_titles": {
+            "loss": "Wide MLP: Loss vs. Epoch",
+            "accuracy": "Wide MLP: Accuracy vs. Epoch",
+            "f1": "Wide MLP: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "WIDE_RESNET": {
+        "model_name": "WideResNet16_8",
+        "dataset_name": "CIFAR10", 
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "Wide ResNet-16-8: Loss vs. Epoch",
+            "accuracy": "Wide ResNet-16-8: Accuracy vs. Epoch",
+            "f1": "Wide ResNet-16-8: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "SIMPLE_VIT": {
+        "model_name": "SimpleViT_Tiny",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "Simple ViT: Loss vs. Epoch",
+            "accuracy": "Simple ViT: Accuracy vs. Epoch",
+            "f1": "Simple ViT: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
     "DEEPCNN": {
         "model_name": "DeepCNN",
         "dataset_name": "CIFAR10",
         "model_args": {},
         "transform": transforms.Compose([
-            transforms.ToTensor()  # Removed random augmentations for consistency
+            transforms.ToTensor() 
         ]),
         "plot_titles": {
             "loss": "Deep CNN: Loss vs. Epoch",
@@ -195,17 +356,130 @@ EXPERIMENT_CONFIGS = {
         },
         "cost_xlimit": None
     },
+    
+    "MODERN_CNN": {
+        "model_name": "ModernCNN_Small",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "Modern CNN: Loss vs. Epoch",
+            "accuracy": "Modern CNN: Accuracy vs. Epoch",
+            "f1": "Modern CNN: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "ATTENTION_CNN": {
+        "model_name": "AttentionCNN_Small",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "Attention CNN: Loss vs. Epoch",
+            "accuracy": "Attention CNN: Accuracy vs. Epoch",
+            "f1": "Attention CNN: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "HYBRID_CNN_TRANSFORMER": {
+        "model_name": "HybridCNNTransformer_Small",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "Hybrid CNN-Transformer: Loss vs. Epoch",
+            "accuracy": "Hybrid CNN-Transformer: Accuracy vs. Epoch",
+            "f1": "Hybrid CNN-Transformer: F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
     "RESNET18": { # Updated ResNet18 configuration
         "model_name": "ResNet18",
-        "dataset_name": "CIFAR100", # Changed dataset to CIFAR100
-        "model_args": {"num_classes": 100}, # Updated num_classes for CIFAR100
+        "dataset_name": "CIFAR100",
+        "model_args": {"num_classes": 100},
         "transform": transforms.Compose([
             transforms.ToTensor() # Use the same simple transform
         ]),
         "plot_titles": {
-            "loss": "ResNet18 (CIFAR100): Loss vs. Epoch", # Updated title
-            "accuracy": "ResNet18 (CIFAR100): Accuracy vs. Epoch", # Updated title
-            "f1": "ResNet18 (CIFAR100): F1 Score vs. Epoch" # Updated title
+            "loss": "ResNet18 (CIFAR100): Loss vs. Epoch", 
+            "accuracy": "ResNet18 (CIFAR100): Accuracy vs. Epoch",
+            "f1": "ResNet18 (CIFAR100): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "RESNET34_CIFAR10": {
+        "model_name": "ResNet34",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "ResNet34 (CIFAR10): Loss vs. Epoch", 
+            "accuracy": "ResNet34 (CIFAR10): Accuracy vs. Epoch",
+            "f1": "ResNet34 (CIFAR10): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "RESNET34_CIFAR100": {
+        "model_name": "ResNet34",
+        "dataset_name": "CIFAR100",
+        "model_args": {"num_classes": 100},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+        ]),
+        "plot_titles": {
+            "loss": "ResNet34 (CIFAR100): Loss vs. Epoch", 
+            "accuracy": "ResNet34 (CIFAR100): Accuracy vs. Epoch",
+            "f1": "ResNet34 (CIFAR100): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "VGG11_CIFAR10": {
+        "model_name": "VGG11",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "VGG11 (CIFAR10): Loss vs. Epoch", 
+            "accuracy": "VGG11 (CIFAR10): Accuracy vs. Epoch",
+            "f1": "VGG11 (CIFAR10): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+    
+    "VGG11_CIFAR100": {
+        "model_name": "VGG11",
+        "dataset_name": "CIFAR100",
+        "model_args": {"num_classes": 100},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+        ]),
+        "plot_titles": {
+            "loss": "VGG11 (CIFAR100): Loss vs. Epoch", 
+            "accuracy": "VGG11 (CIFAR100): Accuracy vs. Epoch",
+            "f1": "VGG11 (CIFAR100): F1 Score vs. Epoch"
         },
         "cost_xlimit": None
     }

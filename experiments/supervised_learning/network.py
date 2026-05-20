@@ -142,6 +142,52 @@ def ResNet18(num_classes=10):
 def ResNet34(num_classes=10):
     return ResNet(ResNetBasicBlock, [3, 4, 6, 3], num_classes=num_classes)
 
+# --- VGG Network ---
+class VGG(nn.Module):
+    def __init__(self, vgg_config, num_classes=10):
+        super(VGG, self).__init__()
+        self.features = self._make_layers(vgg_config)
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, num_classes)
+        )
+
+    def forward(self, x):
+        out = self.features(x)
+        out = out.view(out.size(0), -1)
+        out = self.classifier(out)
+        return out
+
+    def _make_layers(self, cfg):
+        layers = []
+        in_channels = 3
+        for x in cfg:
+            if x == 'M':
+                layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            else:
+                layers += [nn.Conv2d(in_channels, x, kernel_size=3, padding=1),
+                          nn.BatchNorm2d(x),
+                          nn.ReLU(inplace=True)]
+                in_channels = x
+        layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
+        return nn.Sequential(*layers)
+
+# VGG configurations
+vgg_configs = {
+    'VGG11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'VGG13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'VGG16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'VGG19': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+}
+
+def VGG11(num_classes=10):
+    return VGG(vgg_configs['VGG11'], num_classes=num_classes)
+
 # --- Complex Policy Network for RL ---
 class ComplexPolicyNetwork(nn.Module):
     def __init__(self, observation_space, action_space):
@@ -166,5 +212,3 @@ class ComplexPolicyNetwork(nn.Module):
         x = F.relu(self.bn2(self.fc2(x)))
         x = torch.tanh(self.fc3(x)) # Use tanh for bounded actions (-1 to 1)
         return x
-
-# Add other models if needed...

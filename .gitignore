@@ -1,6 +1,9 @@
 # Data directory
 data/
 
+.vscode/
+.venv/
+
 # Python cache files
 __pycache__/
 *.py[cod]
@@ -19,3 +22,5 @@ env/
 # Large data files
 experiments/RL/stand/results/raw_rl_runs_data.json
 experiments/RL/rand/results/raw_rl_runs_data.json
+copy/results/raw_rl_runs_data.json
+*/raw_rl_runs_data.json

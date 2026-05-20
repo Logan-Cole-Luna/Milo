@@ -132,18 +132,46 @@ def create_train_experiment_fn(model_instance, train_loader_instance):
             "config_name": config_name
         }
 
-        # Run training and get steps_per_epoch
-        val_metrics_hist, norm_walltimes, gradient_norms, iter_costs, _, steps_per_epoch, train_metrics_hist = run_training(
+        # Run training using the same loader for train and val in this ablation
+        (
+            val_metrics_hist,
+            norm_walltimes,
+            gradient_norms,
+            iter_costs,
+            layer_runtime_history,
+            layer_bwd_runtime_history,
+            component_runtime_history,
+            trained_model,
+            steps_per_epoch,
+            train_metrics_hist,
+            iteration_logs,
+            validation_walltimes,
+            epoch_end_walltimes,
+        ) = run_training(
             model, current_loader, current_loader, optimizer, criterion, device, EPOCHS,
             scheduler=scheduler, layer_names=layer_names
         )
-        # Provide test_metrics placeholder and steps_per_epoch for experiment_runner
+
+        # Provide test_metrics placeholder for experiment_runner compatibility
         test_metrics = {}
         result = (
-            val_metrics_hist['val_loss'], val_metrics_hist['val_accuracy'], val_metrics_hist['val_f1_score'],
+            val_metrics_hist['val_loss'],
+            val_metrics_hist['val_accuracy'],
+            val_metrics_hist['val_f1_score'],
             val_metrics_hist['val_auc'],
-            iter_costs, norm_walltimes, gradient_norms, layer_names,
-            test_metrics, steps_per_epoch, train_metrics_hist
+            iter_costs,
+            norm_walltimes,
+            gradient_norms,
+            layer_runtime_history,
+            layer_bwd_runtime_history,
+            component_runtime_history,
+            layer_names,
+            test_metrics,
+            steps_per_epoch,
+            train_metrics_hist,
+            iteration_logs,
+            validation_walltimes,
+            epoch_end_walltimes,
         )
 
         if return_settings:

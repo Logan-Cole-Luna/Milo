@@ -1,0 +1,550 @@
+{
+  "model": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "model_architecture": {
+    "conv1.weight": [
+      64,
+      3,
+      3,
+      3
+    ],
+    "bn1.weight": [
+      64
+    ],
+    "bn1.bias": [
+      64
+    ],
+    "layer1.0.conv1.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.0.bn1.weight": [
+      64
+    ],
+    "layer1.0.bn1.bias": [
+      64
+    ],
+    "layer1.0.conv2.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.0.bn2.weight": [
+      64
+    ],
+    "layer1.0.bn2.bias": [
+      64
+    ],
+    "layer1.1.conv1.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.1.bn1.weight": [
+      64
+    ],
+    "layer1.1.bn1.bias": [
+      64
+    ],
+    "layer1.1.conv2.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.1.bn2.weight": [
+      64
+    ],
+    "layer1.1.bn2.bias": [
+      64
+    ],
+    "layer1.2.conv1.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.2.bn1.weight": [
+      64
+    ],
+    "layer1.2.bn1.bias": [
+      64
+    ],
+    "layer1.2.conv2.weight": [
+      64,
+      64,
+      3,
+      3
+    ],
+    "layer1.2.bn2.weight": [
+      64
+    ],
+    "layer1.2.bn2.bias": [
+      64
+    ],
+    "layer2.0.conv1.weight": [
+      128,
+      64,
+      3,
+      3
+    ],
+    "layer2.0.bn1.weight": [
+      128
+    ],
+    "layer2.0.bn1.bias": [
+      128
+    ],
+    "layer2.0.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.0.bn2.weight": [
+      128
+    ],
+    "layer2.0.bn2.bias": [
+      128
+    ],
+    "layer2.0.shortcut.0.weight": [
+      128,
+      64,
+      1,
+      1
+    ],
+    "layer2.0.shortcut.1.weight": [
+      128
+    ],
+    "layer2.0.shortcut.1.bias": [
+      128
+    ],
+    "layer2.1.conv1.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.1.bn1.weight": [
+      128
+    ],
+    "layer2.1.bn1.bias": [
+      128
+    ],
+    "layer2.1.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.1.bn2.weight": [
+      128
+    ],
+    "layer2.1.bn2.bias": [
+      128
+    ],
+    "layer2.2.conv1.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.2.bn1.weight": [
+      128
+    ],
+    "layer2.2.bn1.bias": [
+      128
+    ],
+    "layer2.2.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.2.bn2.weight": [
+      128
+    ],
+    "layer2.2.bn2.bias": [
+      128
+    ],
+    "layer2.3.conv1.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.3.bn1.weight": [
+      128
+    ],
+    "layer2.3.bn1.bias": [
+      128
+    ],
+    "layer2.3.conv2.weight": [
+      128,
+      128,
+      3,
+      3
+    ],
+    "layer2.3.bn2.weight": [
+      128
+    ],
+    "layer2.3.bn2.bias": [
+      128
+    ],
+    "layer3.0.conv1.weight": [
+      256,
+      128,
+      3,
+      3
+    ],
+    "layer3.0.bn1.weight": [
+      256
+    ],
+    "layer3.0.bn1.bias": [
+      256
+    ],
+    "layer3.0.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.0.bn2.weight": [
+      256
+    ],
+    "layer3.0.bn2.bias": [
+      256
+    ],
+    "layer3.0.shortcut.0.weight": [
+      256,
+      128,
+      1,
+      1
+    ],
+    "layer3.0.shortcut.1.weight": [
+      256
+    ],
+    "layer3.0.shortcut.1.bias": [
+      256
+    ],
+    "layer3.1.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.1.bn1.weight": [
+      256
+    ],
+    "layer3.1.bn1.bias": [
+      256
+    ],
+    "layer3.1.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.1.bn2.weight": [
+      256
+    ],
+    "layer3.1.bn2.bias": [
+      256
+    ],
+    "layer3.2.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.2.bn1.weight": [
+      256
+    ],
+    "layer3.2.bn1.bias": [
+      256
+    ],
+    "layer3.2.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.2.bn2.weight": [
+      256
+    ],
+    "layer3.2.bn2.bias": [
+      256
+    ],
+    "layer3.3.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.3.bn1.weight": [
+      256
+    ],
+    "layer3.3.bn1.bias": [
+      256
+    ],
+    "layer3.3.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.3.bn2.weight": [
+      256
+    ],
+    "layer3.3.bn2.bias": [
+      256
+    ],
+    "layer3.4.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.4.bn1.weight": [
+      256
+    ],
+    "layer3.4.bn1.bias": [
+      256
+    ],
+    "layer3.4.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.4.bn2.weight": [
+      256
+    ],
+    "layer3.4.bn2.bias": [
+      256
+    ],
+    "layer3.5.conv1.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.5.bn1.weight": [
+      256
+    ],
+    "layer3.5.bn1.bias": [
+      256
+    ],
+    "layer3.5.conv2.weight": [
+      256,
+      256,
+      3,
+      3
+    ],
+    "layer3.5.bn2.weight": [
+      256
+    ],
+    "layer3.5.bn2.bias": [
+      256
+    ],
+    "layer4.0.conv1.weight": [
+      512,
+      256,
+      3,
+      3
+    ],
+    "layer4.0.bn1.weight": [
+      512
+    ],
+    "layer4.0.bn1.bias": [
+      512
+    ],
+    "layer4.0.conv2.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.0.bn2.weight": [
+      512
+    ],
+    "layer4.0.bn2.bias": [
+      512
+    ],
+    "layer4.0.shortcut.0.weight": [
+      512,
+      256,
+      1,
+      1
+    ],
+    "layer4.0.shortcut.1.weight": [
+      512
+    ],
+    "layer4.0.shortcut.1.bias": [
+      512
+    ],
+    "layer4.1.conv1.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.1.bn1.weight": [
+      512
+    ],
+    "layer4.1.bn1.bias": [
+      512
+    ],
+    "layer4.1.conv2.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.1.bn2.weight": [
+      512
+    ],
+    "layer4.1.bn2.bias": [
+      512
+    ],
+    "layer4.2.conv1.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.2.bn1.weight": [
+      512
+    ],
+    "layer4.2.bn1.bias": [
+      512
+    ],
+    "layer4.2.conv2.weight": [
+      512,
+      512,
+      3,
+      3
+    ],
+    "layer4.2.bn2.weight": [
+      512
+    ],
+    "layer4.2.bn2.bias": [
+      512
+    ],
+    "linear.weight": [
+      10,
+      512
+    ],
+    "linear.bias": [
+      10
+    ],
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "batch_size": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "dataset": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "criterion": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "device": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "validation_split_ratio": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "test_split_ratio": {
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  },
+  "optimizer_params": {
+    "MILO": {
+      "momentum": 0.8206965851588501,
+      "eps": 1.5951281476456548e-08,
+      "adaptive_eps": 1.6291736244626128e-10,
+      "weight_decay": 0.00017197478951580912,
+      "clip_norm": 1.0
+    },
+    "MILO_LW": {
+      "momentum": 0.870277393690283,
+      "scale_factor": 0.12322198989846067,
+      "eps": 2.8193545494675006e-06,
+      "adaptive_eps": 4.992361036518951e-10,
+      "weight_decay": 0.008389285673750288,
+      "clip_norm": 2.0,
+      "scale_aware": true
+    },
+    "SGD": {
+      "momentum": 0.8886690005143731,
+      "weight_decay": 0.006738859395598921
+    },
+    "ADAMW": {
+      "weight_decay": 0.0033938910642688285,
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "eps": 2.0243109032194693e-08
+    },
+    "ADAM_MINI": {
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "weight_decay": 0.0021262589452714455
+    },
+    "NOVOGRAD": {
+      "betas": [
+        0.95,
+        0.99
+      ],
+      "weight_decay": 0.0005868468460200001
+    },
+    "ADAGRAD": {
+      "lr_decay": 0.016291269862407597,
+      "weight_decay": 0.0007609104783086574,
+      "eps": 9.765269549641154e-10
+    },
+    "ADEMAMIX": {
+      "betas": [
+        0.95,
+        0.999,
+        0.9999
+      ],
+      "alpha": 6.278557866605254,
+      "weight_decay": 0.001054749135232859,
+      "eps": 1.6452876762197248e-10
+    },
+    "experiment_title": "RESNET34_CIFAR10 Experiment ",
+    "epochs": 10,
+    "num_runs": 5
+  }
+}
