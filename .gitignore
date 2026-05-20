@@ -20,7 +20,4 @@ env/
 .env/
 
 # Large data files
-experiments/RL/stand/results/raw_rl_runs_data.json
-experiments/RL/rand/results/raw_rl_runs_data.json
-experiments/RL/stand\ copy/results/raw_rl_runs_data.json
-*/raw_rl_runs_data.json
+**/raw_rl_runs_data.json
