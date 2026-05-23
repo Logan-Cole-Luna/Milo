@@ -48,6 +48,7 @@ class milo(Optimizer):  # noqa: D101
         force_cuda_fallback: bool = False,
         # Performance tuning
         normalize_interval: int = 1,
+        verbose_profile: bool = False,
     ):
         """
         Implements Normalized Stochastic Gradient Descent (optionally with momentum).
@@ -120,6 +121,7 @@ class milo(Optimizer):  # noqa: D101
             force_cuda_fallback=force_cuda_fallback,
             # Performance tuning
             normalize_interval=normalize_interval,
+            verbose_profile=verbose_profile,
         )
         if nesterov and (momentum <= 0 or dampening != 0):
             raise ValueError("Nesterov momentum requires a momentum and zero dampening")

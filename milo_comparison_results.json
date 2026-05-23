@@ -1,0 +1,32 @@
+{
+  "milo_base": {
+    "display_name": "MILO (Base)",
+    "experiments": {
+      "VGG11_CIFAR10": {
+        "time": 26.687582969665527,
+        "accuracy": 74.56,
+        "loss": 0.7728711034678206
+      },
+      "VGG11_CIFAR100": {
+        "time": 24.76924204826355,
+        "accuracy": 75.36,
+        "loss": 0.7532736251625833
+      }
+    }
+  },
+  "milo_accelerated": {
+    "display_name": "MILO Accelerated",
+    "experiments": {
+      "VGG11_CIFAR10": {
+        "time": 24.19002389907837,
+        "accuracy": 74.6,
+        "loss": 0.8447579598125023
+      },
+      "VGG11_CIFAR100": {
+        "time": 24.49395728111267,
+        "accuracy": 73.7,
+        "loss": 0.8636885462682459
+      }
+    }
+  }
+}

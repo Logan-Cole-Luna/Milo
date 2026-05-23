@@ -16,11 +16,11 @@ import torch.distributed as dist
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from milo import milo
-from novograd import NovoGrad
-from adam_mini import Adam_mini
-from ademamix_pytorch import AdEMAMix
-# from muon import MuonWithAuxAdam
-from soap import SOAP
+from optimizers.novograd import NovoGrad
+# from adam_mini import Adam_mini
+from optimizers.ademamix_pytorch import AdEMAMix
+from optimizers.muon import MuonWithAuxAdam
+from optimizers.soap import SOAP
 from torch.utils.data import random_split, DataLoader
 
 # --- Add RL Evaluation Function ---

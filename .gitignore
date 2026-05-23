@@ -27,3 +27,5 @@ env/
 *.pt
 *layer_mapping*
 layers/
+
+logs/

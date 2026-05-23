@@ -34,12 +34,12 @@ from experiments.supervised_learning.network import (
 
 # Import optimizers and utilities
 from milo_accelerated import milo
-from novograd import NovoGrad
+from optimizers.novograd import NovoGrad
 #from adalayer import Adalayer
-from adam_mini import Adam_mini
-from muon import MuonWithAuxAdam
-from ademamix_pytorch import AdEMAMix
-from soap import SOAP
+# from adam_mini import Adam_mini
+from optimizers.muon import MuonWithAuxAdam
+from optimizers.ademamix_pytorch import AdEMAMix
+from optimizers.soap import SOAP
 
 # Import configuration
 from experiments.supervised_learning.config import (
