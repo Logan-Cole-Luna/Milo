@@ -32,24 +32,28 @@ from torchvision import transforms
 # --- Experiment Settings ---
 
 # Recommended experiment subsets for different purposes:
-FINAL_SUITE = ["VGG11_CIFAR10", "VGG11_CIFAR100"]
-#FINAL_SUITE = ["LOGISTIC", "MULTILAYER", "RESNET34_CIFAR10"]
+# Option A: Current suite (CNN only)
 #FINAL_SUITE = ["LOGISTIC", "MULTILAYER", "RESNET34_CIFAR10", "RESNET34_CIFAR100", "VGG11_CIFAR10", "VGG11_CIFAR100"]
 
+# Option C: Comprehensive suite (includes Vision Transformers)
+FINAL_SUITE = [
+    "LOGISTIC", "MULTILAYER",
+    "RESNET34_CIFAR10", "RESNET34_CIFAR100",
+    "VGG11_CIFAR10", "VGG11_CIFAR100",
+    "VIT_TINY_CIFAR10", "VIT_TINY_CIFAR100"
+]
 
-EXPERIMENTS = [FINAL_SUITE] 
+
+EXPERIMENTS = [FINAL_SUITE]
 
 # --- Optimizers to Use ---
 OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAGRAD", "ADEMAMIX", "SOAP"]
-#OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW"]
-#OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAM_MINI", "NOVOGRAD", "ADAGRAD", "ADEMAMIX"]
-#OPTIMIZERS = ["MUON"]
 
 
-PERFORM_HYPERPARAMETER_TUNING = False 
+PERFORM_HYPERPARAMETER_TUNING = False
 BATCH_SIZE = 128
 EPOCHS = 5
-RUNS_PER_OPTIMIZER = 1
+RUNS_PER_OPTIMIZER = 5  # Updated from 1 to 5 for statistical validity
 
 TRIALS = 5 # Hyperparameter tuning trials
 VAL_SPLIT_RATIO = 0.15 
@@ -78,6 +82,8 @@ LR = {
     "RESNET34_CIFAR100": 0.001,
     "VGG11_CIFAR10": 0.001,
     "VGG11_CIFAR100": 0.001,
+    "VIT_TINY_CIFAR10": 0.0005,
+    "VIT_TINY_CIFAR100": 0.0005,
 }
 
 
@@ -164,39 +170,33 @@ OPTIMIZER_PARAMS = {
     "ADAMW": {"betas": (0.9, 0.999), "eps": 1e-8, "weight_decay": 0.01}, 
     "MILO": {
         "verbose_profile": False,
-        #"lr": 0.05,
         "normalize": True,
-        "layer_wise": False,
-        "scale_aware": False,
-        "scale_factor": 0.2,
+        "layer_wise": False,  # Network-wide grouping
+        "scale_aware": True,  # CRITICAL: Enable blending to prevent vanishing updates
+        "scale_factor": 0.2,  # Blend 20% raw gradient with 80% normalized
         "nesterov": False,
-        "adaptive": True,
+        "adaptive": True,     # RMSprop-style adaptive scaling
         "momentum": 0.9,
-        #"weight_decay": 0.001,
         "profile_time": False,
-        'max_group_size': None,
+        'max_group_size': 5000,  # Fixed-size groups (was None/dynamic - caused over-normalization)
         "use_cached_mapping": True,
         "foreach": True,
-        'use_cuda_kernels': False,
-        # Performance tuning: do normalization every N steps (1 = every step)
+        'use_cuda_kernels': True,  # Enable CUDA optimization
         'normalize_interval': 1
     },
     "MILO_LW": {
-        #"lr": 0.05,
         "normalize": True,
-        "layer_wise": True,
-        "scale_aware": False,
-        "scale_factor": 0.2,
+        "layer_wise": True,   # Layer-wise grouping for architecture-aware normalization
+        "scale_aware": True,  # CRITICAL: Enable blending to prevent vanishing updates
+        "scale_factor": 0.2,  # Blend 20% raw gradient with 80% normalized
         "nesterov": False,
-        "adaptive": True,
+        "adaptive": True,     # RMSprop-style adaptive scaling
         "momentum": 0.9,
-        #"weight_decay": 0.001,
         "profile_time": False,
-        'max_group_size': None,
+        'max_group_size': 5000,  # Fixed-size groups (was None/dynamic - caused over-normalization)
         "use_cached_mapping": True,
         "foreach": True,
-        'use_cuda_kernels': False,
-        # Layer-wise normalization can be heavier; allow interval tuning
+        'use_cuda_kernels': True,  # Enable CUDA optimization
         'normalize_interval': 1
     },
     "NOVOGRAD": {
@@ -477,9 +477,41 @@ EXPERIMENT_CONFIGS = {
             transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
         ]),
         "plot_titles": {
-            "loss": "VGG11 (CIFAR100): Loss vs. Epoch", 
+            "loss": "VGG11 (CIFAR100): Loss vs. Epoch",
             "accuracy": "VGG11 (CIFAR100): Accuracy vs. Epoch",
             "f1": "VGG11 (CIFAR100): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+
+    "VIT_TINY_CIFAR10": {
+        "model_name": "ViT_Tiny",
+        "dataset_name": "CIFAR10",
+        "model_args": {"num_classes": 10, "img_size": 32},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+        ]),
+        "plot_titles": {
+            "loss": "ViT-Tiny (CIFAR10): Loss vs. Epoch",
+            "accuracy": "ViT-Tiny (CIFAR10): Accuracy vs. Epoch",
+            "f1": "ViT-Tiny (CIFAR10): F1 Score vs. Epoch"
+        },
+        "cost_xlimit": None
+    },
+
+    "VIT_TINY_CIFAR100": {
+        "model_name": "ViT_Tiny",
+        "dataset_name": "CIFAR100",
+        "model_args": {"num_classes": 100, "img_size": 32},
+        "transform": transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+        ]),
+        "plot_titles": {
+            "loss": "ViT-Tiny (CIFAR100): Loss vs. Epoch",
+            "accuracy": "ViT-Tiny (CIFAR100): Accuracy vs. Epoch",
+            "f1": "ViT-Tiny (CIFAR100): F1 Score vs. Epoch"
         },
         "cost_xlimit": None
     }

@@ -1,7 +1,7 @@
 {
   "model": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "model_architecture": {
@@ -147,57 +147,58 @@
       100
     ],
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "batch_size": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "dataset": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "criterion": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "device": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "scheduler_params": {
     "scheduler": "None",
     "params": {},
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "validation_split_ratio": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "test_split_ratio": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   },
   "optimizer_params": {
     "MILO": {
+      "verbose_profile": false,
       "normalize": true,
       "layer_wise": false,
-      "scale_aware": false,
+      "scale_aware": true,
       "scale_factor": 0.2,
       "nesterov": false,
       "adaptive": true,
       "momentum": 0.9,
       "profile_time": false,
-      "max_group_size": null,
+      "max_group_size": 5000,
       "use_cached_mapping": true,
       "foreach": true,
       "use_cuda_kernels": true,
@@ -206,13 +207,13 @@
     "MILO_LW": {
       "normalize": true,
       "layer_wise": true,
-      "scale_aware": false,
+      "scale_aware": true,
       "scale_factor": 0.2,
       "nesterov": false,
       "adaptive": true,
       "momentum": 0.9,
       "profile_time": false,
-      "max_group_size": null,
+      "max_group_size": 5000,
       "use_cached_mapping": true,
       "foreach": true,
       "use_cuda_kernels": true,
@@ -231,22 +232,6 @@
       "eps": 1e-08,
       "weight_decay": 0.01
     },
-    "ADAM_MINI": {
-      "betas": [
-        0.9,
-        0.999
-      ],
-      "eps": 1e-08,
-      "weight_decay": 0
-    },
-    "NOVOGRAD": {
-      "betas": [
-        0.9,
-        0.99
-      ],
-      "weight_decay": 0.001,
-      "grad_averaging": true
-    },
     "ADAGRAD": {
       "lr_decay": 0,
       "weight_decay": 0.0,
@@ -264,8 +249,21 @@
       "beta3_warmup": 0,
       "alpha_warmup": 0
     },
+    "SOAP": {
+      "betas": [
+        0.95,
+        0.95
+      ],
+      "weight_decay": 0.01,
+      "precondition_frequency": 10,
+      "max_precond_dim": 10000,
+      "merge_dims": false,
+      "precondition_1d": false,
+      "normalize_grads": false,
+      "eps": 1e-08
+    },
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
+    "epochs": 5,
     "num_runs": 5
   }
 }

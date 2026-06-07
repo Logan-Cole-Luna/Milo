@@ -29,11 +29,11 @@ from experiments.hyperparameter_tuning_utils import tune_hyperparameters
 
 # Import network models
 from experiments.supervised_learning.network import (
-    LogisticRegressionModel, MLP, DeepCNN, ResNet18, ResNet34, VGG11,
+    LogisticRegressionModel, MLP, DeepCNN, ResNet18, ResNet34, VGG11, ViT_Tiny,
 )
 
 # Import optimizers and utilities
-from milo_accelerated import milo
+from milo import milo
 from optimizers.novograd import NovoGrad
 #from adalayer import Adalayer
 # from adam_mini import Adam_mini
@@ -112,18 +112,24 @@ def get_model(model_name, model_args={}):
         return ResNet34(**model_args)
     elif model_name == "VGG11":
         return VGG11(**model_args)
+    elif model_name == "ViT_Tiny":
+        return ViT_Tiny(**model_args)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
 
 def get_dataloader(dataset_name, transform, batch_size, train=True):
     """Loads a dataset based on its name."""
-    root = './data'  
+    import os
+    # Use pre-downloaded datasets from scratch directory (offline HPC)
+    root = os.path.expanduser('~/scratch/datasets')
+    os.makedirs(root, exist_ok=True)
+
     if dataset_name == "MNIST":
-        dataset = datasets.MNIST(root=root, train=train, download=True, transform=transform)
+        dataset = datasets.MNIST(root=root, train=train, download=False, transform=transform)
     elif dataset_name == "CIFAR10":
-        dataset = datasets.CIFAR10(root=root, train=train, download=True, transform=transform)
+        dataset = datasets.CIFAR10(root=root, train=train, download=False, transform=transform)
     elif dataset_name == "CIFAR100":
-        dataset = datasets.CIFAR100(root=root, train=train, download=True, transform=transform)
+        dataset = datasets.CIFAR100(root=root, train=train, download=False, transform=transform)
     else:
         raise ValueError(f"Unknown dataset name: {dataset_name}")
     return DataLoader(dataset, batch_size=batch_size, shuffle=train)

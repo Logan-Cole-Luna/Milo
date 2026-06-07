@@ -212,3 +212,133 @@ class ComplexPolicyNetwork(nn.Module):
         x = F.relu(self.bn2(self.fc2(x)))
         x = torch.tanh(self.fc3(x)) # Use tanh for bounded actions (-1 to 1)
         return x
+
+
+# --- Vision Transformer (ViT) ---
+
+class PatchEmbedding(nn.Module):
+    """Convert image to patch embeddings."""
+    def __init__(self, img_size=32, patch_size=4, in_channels=3, embed_dim=192):
+        super().__init__()
+        self.img_size = img_size
+        self.patch_size = patch_size
+        self.num_patches = (img_size // patch_size) ** 2
+
+        self.proj = nn.Conv2d(in_channels, embed_dim, kernel_size=patch_size, stride=patch_size)
+
+    def forward(self, x):
+        # x: (B, C, H, W)
+        x = self.proj(x)  # (B, embed_dim, num_patches_h, num_patches_w)
+        x = x.flatten(2)  # (B, embed_dim, num_patches)
+        x = x.transpose(1, 2)  # (B, num_patches, embed_dim)
+        return x
+
+
+class TransformerBlock(nn.Module):
+    """Single transformer block with attention and MLP."""
+    def __init__(self, embed_dim=192, num_heads=3, mlp_ratio=4.0, dropout=0.0):
+        super().__init__()
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.attn = nn.MultiheadAttention(embed_dim, num_heads, dropout=dropout, batch_first=True)
+        self.norm2 = nn.LayerNorm(embed_dim)
+
+        mlp_hidden = int(embed_dim * mlp_ratio)
+        self.mlp = nn.Sequential(
+            nn.Linear(embed_dim, mlp_hidden),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(mlp_hidden, embed_dim),
+            nn.Dropout(dropout),
+        )
+
+    def forward(self, x):
+        # Self-attention with residual
+        x_norm = self.norm1(x)
+        attn_out, _ = self.attn(x_norm, x_norm, x_norm)
+        x = x + attn_out
+
+        # MLP with residual
+        x = x + self.mlp(self.norm2(x))
+        return x
+
+
+class VisionTransformer(nn.Module):
+    """Vision Transformer (ViT) for image classification."""
+    def __init__(self, img_size=32, patch_size=4, in_channels=3, num_classes=10,
+                 embed_dim=192, depth=12, num_heads=3, mlp_ratio=4.0, dropout=0.0):
+        super().__init__()
+
+        self.embed_dim = embed_dim
+
+        # Patch embedding
+        self.patch_embed = PatchEmbedding(img_size, patch_size, in_channels, embed_dim)
+        num_patches = self.patch_embed.num_patches
+
+        # Class token and position embeddings
+        self.cls_token = nn.Parameter(torch.zeros(1, 1, embed_dim))
+        self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim))
+        self.pos_drop = nn.Dropout(dropout)
+
+        # Transformer blocks
+        self.blocks = nn.ModuleList([
+            TransformerBlock(embed_dim, num_heads, mlp_ratio, dropout)
+            for _ in range(depth)
+        ])
+
+        # Classification head
+        self.norm = nn.LayerNorm(embed_dim)
+        self.head = nn.Linear(embed_dim, num_classes)
+
+        # Initialize weights
+        nn.init.trunc_normal_(self.pos_embed, std=0.02)
+        nn.init.trunc_normal_(self.cls_token, std=0.02)
+        self.apply(self._init_weights)
+
+    def _init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, nn.LayerNorm):
+            nn.init.constant_(m.bias, 0)
+            nn.init.constant_(m.weight, 1.0)
+
+    def forward(self, x):
+        B = x.shape[0]
+
+        # Patch embedding: (B, num_patches, embed_dim)
+        x = self.patch_embed(x)
+
+        # Add class token: (B, num_patches+1, embed_dim)
+        cls_tokens = self.cls_token.expand(B, -1, -1)
+        x = torch.cat([cls_tokens, x], dim=1)
+
+        # Add position embeddings
+        x = x + self.pos_embed
+        x = self.pos_drop(x)
+
+        # Apply transformer blocks
+        for block in self.blocks:
+            x = block(x)
+
+        # Classification
+        x = self.norm(x)
+        x = x[:, 0]  # Take class token
+        x = self.head(x)
+
+        return x
+
+
+def ViT_Tiny(num_classes=10, img_size=32):
+    """Lightweight Vision Transformer for CIFAR-10/100."""
+    return VisionTransformer(
+        img_size=img_size,
+        patch_size=4,
+        in_channels=3,
+        num_classes=num_classes,
+        embed_dim=192,      # Tiny: 192 instead of 768
+        depth=12,           # Standard depth
+        num_heads=3,        # 3 heads: 192/3 = 64 per head
+        mlp_ratio=4.0,
+        dropout=0.1
+    )

@@ -2,7 +2,7 @@
   "model": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "model_architecture": {
     "features.0.weight": [
@@ -148,75 +148,75 @@
     ],
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "batch_size": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "dataset": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "criterion": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "device": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "scheduler_params": {
     "scheduler": "None",
     "params": {},
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "validation_split_ratio": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "test_split_ratio": {
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   },
   "optimizer_params": {
     "MILO": {
       "verbose_profile": false,
       "normalize": true,
       "layer_wise": false,
-      "scale_aware": false,
+      "scale_aware": true,
       "scale_factor": 0.2,
       "nesterov": false,
       "adaptive": true,
       "momentum": 0.9,
       "profile_time": false,
-      "max_group_size": null,
+      "max_group_size": 5000,
       "use_cached_mapping": true,
       "foreach": true,
-      "use_cuda_kernels": false,
+      "use_cuda_kernels": true,
       "normalize_interval": 1
     },
     "MILO_LW": {
       "normalize": true,
       "layer_wise": true,
-      "scale_aware": false,
+      "scale_aware": true,
       "scale_factor": 0.2,
       "nesterov": false,
       "adaptive": true,
       "momentum": 0.9,
       "profile_time": false,
-      "max_group_size": null,
+      "max_group_size": 5000,
       "use_cached_mapping": true,
       "foreach": true,
-      "use_cuda_kernels": false,
+      "use_cuda_kernels": true,
       "normalize_interval": 1
     },
     "SGD": {
@@ -264,6 +264,6 @@
     },
     "experiment_title": "VGG11_CIFAR10 Experiment ",
     "epochs": 5,
-    "num_runs": 1
+    "num_runs": 5
   }
 }
