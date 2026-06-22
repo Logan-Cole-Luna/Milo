@@ -1,0 +1,16 @@
+# Component ablations for the paper (small LM, 0.4B tokens, 2 seeds).
+# NOTE: YAML keys must be unique, so multi-variant ablations of the SAME
+# optimizer live in scripts/run_ablations.sh -- this file only carries the
+# two single-variant rows runnable via the sweep runner.
+base_cmd: python tasks/lm_pretrain.py --data fineweb --model small
+fixed_args: --tokens 4e8 --batch-size 16 --accum 2 --out-dir results/ablations
+seeds: [1, 2]
+optimizers:
+  milo_m:
+    lrs: [0.003]
+    extra_args: >-
+      --opt-kwargs '{"group_mode":"flat"}'
+  mion:
+    lrs: [0.003]
+    extra_args: >-
+      --opt-kwargs '{"scale_factor":0.2}'

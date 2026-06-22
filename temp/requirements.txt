@@ -1,0 +1,17 @@
+# Core (PyTorch installed separately -- see setup.sh: 5070 Ti needs cu128 wheels)
+numpy
+pandas
+matplotlib
+pyyaml
+tabulate
+tiktoken
+datasets>=2.19
+transformers>=4.44
+torchvision
+
+# Optimizer packages
+lion-pytorch
+schedulefree
+prodigyopt
+kron-torch
+# Shampoo (Meta reference impl) is installed from git in setup.sh

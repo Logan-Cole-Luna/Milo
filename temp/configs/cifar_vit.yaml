@@ -1,0 +1,13 @@
+# ViT-Tiny from scratch: a regime where SGD struggles and adaptive/spectral
+# methods shine -- good discriminative power between optimizers.
+base_cmd: python tasks/vision.py --model vit_tiny
+fixed_args: --epochs 60 --batch 512 --wd 0.05 --out-dir results/vision
+seeds: [1, 2, 3]
+optimizers:
+  sgdm:    {lrs: [0.3, 0.1]}
+  adamw:   {lrs: [3e-3, 1e-3, 3e-4]}
+  muon:    {lrs: [0.05, 0.02, 0.01]}
+  soap:    {lrs: [6e-3, 3e-3, 1e-3]}
+  milo:    {lrs: [0.1, 0.03, 0.01]}
+  milo_m:  {lrs: [0.03, 0.01, 0.003]}
+  mion:    {lrs: [0.03, 0.01, 0.003]}

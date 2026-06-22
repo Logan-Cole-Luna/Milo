@@ -1,0 +1,23 @@
+# Phase 1: LR sweeps on the small (52M) model, 0.4B tokens each.
+# ~25-40 min/run on a 5070 Ti; resume-safe. After this, read the best LR per
+# optimizer from `python analysis/aggregate.py results/lm` and run lm_final.
+base_cmd: python tasks/lm_pretrain.py --data fineweb --model small
+fixed_args: --tokens 4e8 --batch-size 16 --accum 2 --ctx 1024 --out-dir results/lm_sweep
+seeds: [1]            # sweep with one seed; final runs use 3
+optimizers:
+  adamw:        {lrs: [3e-3, 1e-3, 6e-4, 3e-4]}
+  nadamw:       {lrs: [1e-3, 6e-4, 3e-4]}
+  sgdm:         {lrs: [1.0, 0.3, 0.1]}
+  adafactor:    {lrs: [3e-3, 1e-3, 3e-4]}
+  lion:         {lrs: [3e-4, 1e-4, 3e-5]}
+  ademamix:     {lrs: [1e-3, 6e-4, 3e-4]}
+  schedulefree: {lrs: [3e-3, 1e-3, 3e-4]}
+  prodigy:      {lrs: [1.0]}                  # parameter-free
+  sophia:       {lrs: [6e-4, 3e-4, 1e-4]}
+  muon:         {lrs: [0.05, 0.02, 0.01]}
+  soap:         {lrs: [6e-3, 3e-3, 1e-3]}
+  shampoo:      {lrs: [3e-3, 1e-3, 3e-4]}
+  kron:         {lrs: [3e-3, 1e-3, 3e-4]}
+  milo:         {lrs: [0.1, 0.03, 0.01]}
+  milo_m:       {lrs: [0.03, 0.01, 0.003, 0.001]}
+  mion:         {lrs: [0.03, 0.01, 0.003, 0.001]}

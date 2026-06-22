@@ -1,0 +1,14 @@
+# Phase 2: headline runs. EDIT the lrs below to the per-optimizer winners from
+# the sweep, then run with 3 seeds on the 124M-class model, 2B tokens.
+# ~5-7 h/run on a 5070 Ti -- prioritize: adamw, muon, soap, mion, milo_m, milo.
+base_cmd: python tasks/lm_pretrain.py --data fineweb --model gpt2
+fixed_args: --tokens 2e9 --batch-size 8 --accum 8 --ctx 1024 --out-dir results/lm_final
+seeds: [1, 2, 3]
+optimizers:
+  adamw:   {lrs: [6e-4]}     # <- replace with sweep winners
+  muon:    {lrs: [0.02]}
+  soap:    {lrs: [3e-3]}
+  sophia:  {lrs: [3e-4]}
+  milo:    {lrs: [0.03]}
+  milo_m:  {lrs: [0.003]}
+  mion:    {lrs: [0.003]}

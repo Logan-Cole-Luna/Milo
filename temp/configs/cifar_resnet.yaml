@@ -1,0 +1,13 @@
+base_cmd: python tasks/vision.py --model resnet18
+fixed_args: --epochs 30 --batch 512 --out-dir results/vision
+seeds: [1, 2, 3]
+optimizers:
+  sgdm:    {lrs: [0.3, 0.1, 0.03]}
+  adamw:   {lrs: [3e-3, 1e-3, 3e-4]}
+  lion:    {lrs: [3e-4, 1e-4]}
+  muon:    {lrs: [0.05, 0.02, 0.01]}
+  soap:    {lrs: [6e-3, 3e-3, 1e-3]}
+  shampoo: {lrs: [3e-3, 1e-3]}
+  milo:    {lrs: [0.1, 0.03, 0.01]}
+  milo_m:  {lrs: [0.03, 0.01, 0.003]}
+  mion:    {lrs: [0.03, 0.01, 0.003]}

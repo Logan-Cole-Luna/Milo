@@ -1,0 +1,9 @@
+base_cmd: python tasks/glue_finetune.py
+fixed_args: --epochs 3 --out-dir results/glue
+seeds: [1, 2, 3]
+optimizers:
+  adamw:  {lrs: [3e-5, 1e-5], extra_args: --glue-task mrpc}
+  muon:   {lrs: [3e-3, 1e-3], extra_args: --glue-task mrpc}
+  soap:   {lrs: [1e-4, 3e-5], extra_args: --glue-task mrpc}
+  milo_m: {lrs: [1e-3, 3e-4], extra_args: --glue-task mrpc}
+  mion:   {lrs: [1e-3, 3e-4], extra_args: --glue-task mrpc}
