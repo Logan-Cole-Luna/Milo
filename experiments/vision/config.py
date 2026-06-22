@@ -200,14 +200,14 @@ EXPERIMENT_CONFIGS = {
     "LOGISTIC": {
         "model_name": "LogisticRegressionModel",
         "dataset_name": "MNIST",
-        "model_args": {"input_size": 784, "output_size": 10},
+        "model_args": {"input_dim": 784, "num_classes": 10},
         "transforms": None,
         "plot_title": "Logistic Regression on MNIST",
     },
     "MULTILAYER": {
         "model_name": "MLP",
         "dataset_name": "MNIST",
-        "model_args": {"input_size": 784, "hidden_size": 256, "output_size": 10},
+        "model_args": {"input_dim": 784, "hidden_dim": 256, "output_dim": 10},
         "transforms": None,
         "plot_title": "MLP on MNIST",
     },

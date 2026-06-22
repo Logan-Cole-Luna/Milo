@@ -1,0 +1,42 @@
+[
+  {
+    "run": 1,
+    "optimizer": "ADAM_MINI",
+    "task": "SST-2",
+    "best_val_accuracy": 88.30275229357798,
+    "best_val_loss": 0.36546835250088144,
+    "training_time_seconds": 968.2828304767609
+  },
+  {
+    "run": 2,
+    "optimizer": "ADAM_MINI",
+    "task": "SST-2",
+    "best_val_accuracy": 85.6651376146789,
+    "best_val_loss": 0.4081526169819491,
+    "training_time_seconds": 968.3574118614197
+  },
+  {
+    "run": 3,
+    "optimizer": "ADAM_MINI",
+    "task": "SST-2",
+    "best_val_accuracy": 86.35321100917432,
+    "best_val_loss": 0.3922393353922026,
+    "training_time_seconds": 968.3380341529846
+  },
+  {
+    "run": 4,
+    "optimizer": "ADAM_MINI",
+    "task": "SST-2",
+    "best_val_accuracy": 87.95871559633028,
+    "best_val_loss": 0.29926724918186665,
+    "training_time_seconds": 968.3210411071777
+  },
+  {
+    "run": 5,
+    "optimizer": "ADAM_MINI",
+    "task": "SST-2",
+    "best_val_accuracy": 86.69724770642202,
+    "best_val_loss": 0.35601647411073956,
+    "training_time_seconds": 976.7780368328094
+  }
+]

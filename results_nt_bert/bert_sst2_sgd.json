@@ -3,40 +3,40 @@
     "run": 1,
     "optimizer": "SGD",
     "task": "SST-2",
-    "best_val_accuracy": 86.23853211009174,
-    "best_val_loss": 0.3219471371599606,
-    "training_time_seconds": 1014.5910687446594
+    "best_val_accuracy": 85.89449541284404,
+    "best_val_loss": 0.3224803384925638,
+    "training_time_seconds": 969.351663351059
   },
   {
     "run": 2,
     "optimizer": "SGD",
     "task": "SST-2",
     "best_val_accuracy": 85.6651376146789,
-    "best_val_loss": 0.32328953381095615,
-    "training_time_seconds": 1014.3260023593903
+    "best_val_loss": 0.32329338256801876,
+    "training_time_seconds": 941.8120677471161
   },
   {
     "run": 3,
     "optimizer": "SGD",
     "task": "SST-2",
     "best_val_accuracy": 86.23853211009174,
-    "best_val_loss": 0.32781576418450903,
-    "training_time_seconds": 1029.6789796352386
+    "best_val_loss": 0.32985239050218035,
+    "training_time_seconds": 941.2536640167236
   },
   {
     "run": 4,
     "optimizer": "SGD",
     "task": "SST-2",
     "best_val_accuracy": 85.3211009174312,
-    "best_val_loss": 0.3400713364992823,
-    "training_time_seconds": 1104.0491902828217
+    "best_val_loss": 0.3401092993361609,
+    "training_time_seconds": 939.6766521930695
   },
   {
     "run": 5,
     "optimizer": "SGD",
     "task": "SST-2",
     "best_val_accuracy": 85.55045871559633,
-    "best_val_loss": 0.31632901036313604,
-    "training_time_seconds": 1074.0540044307709
+    "best_val_loss": 0.3162343954401357,
+    "training_time_seconds": 969.929386138916
   }
 ]

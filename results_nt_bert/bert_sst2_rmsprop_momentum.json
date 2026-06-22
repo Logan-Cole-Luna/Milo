@@ -1,0 +1,42 @@
+[
+  {
+    "run": 1,
+    "optimizer": "RMSPROP_MOMENTUM",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.8521278756005424,
+    "training_time_seconds": 975.5764715671539
+  },
+  {
+    "run": 2,
+    "optimizer": "RMSPROP_MOMENTUM",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 1.2494298411267144,
+    "training_time_seconds": 975.2320082187653
+  },
+  {
+    "run": 3,
+    "optimizer": "RMSPROP_MOMENTUM",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.7415616341999599,
+    "training_time_seconds": 974.9849827289581
+  },
+  {
+    "run": 4,
+    "optimizer": "RMSPROP_MOMENTUM",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 1.0782742436443056,
+    "training_time_seconds": 975.2945349216461
+  },
+  {
+    "run": 5,
+    "optimizer": "RMSPROP_MOMENTUM",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 2.7010932309286937,
+    "training_time_seconds": 983.6030669212341
+  }
+]

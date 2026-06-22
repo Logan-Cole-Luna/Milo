@@ -3,40 +3,40 @@
     "run": 1,
     "optimizer": "MILO_LW",
     "task": "SST-2",
-    "best_val_accuracy": 91.74311926605505,
-    "best_val_loss": 0.2609136542970581,
-    "training_time_seconds": 1055.546406030655
+    "best_val_accuracy": 91.62844036697248,
+    "best_val_loss": 0.2595972857837166,
+    "training_time_seconds": 1034.1711168289185
   },
   {
     "run": 2,
     "optimizer": "MILO_LW",
     "task": "SST-2",
-    "best_val_accuracy": 91.62844036697248,
-    "best_val_loss": 0.25810245810342686,
-    "training_time_seconds": 1036.0795619487762
+    "best_val_accuracy": 91.74311926605505,
+    "best_val_loss": 0.25786311206008705,
+    "training_time_seconds": 1047.6921191215515
   },
   {
     "run": 3,
     "optimizer": "MILO_LW",
     "task": "SST-2",
     "best_val_accuracy": 91.97247706422019,
-    "best_val_loss": 0.2863391810762031,
-    "training_time_seconds": 1036.4148795604706
+    "best_val_loss": 0.2864867345030819,
+    "training_time_seconds": 1033.348510980606
   },
   {
     "run": 4,
     "optimizer": "MILO_LW",
     "task": "SST-2",
     "best_val_accuracy": 92.08715596330275,
-    "best_val_loss": 0.23245845455676317,
-    "training_time_seconds": 1040.1060121059418
+    "best_val_loss": 0.2334549097078187,
+    "training_time_seconds": 1077.656136751175
   },
   {
     "run": 5,
     "optimizer": "MILO_LW",
     "task": "SST-2",
-    "best_val_accuracy": 91.28440366972477,
-    "best_val_loss": 0.24372688414795057,
-    "training_time_seconds": 1035.5772676467896
+    "best_val_accuracy": 91.5137614678899,
+    "best_val_loss": 0.24648107295589788,
+    "training_time_seconds": 1040.4580390453339
   }
 ]

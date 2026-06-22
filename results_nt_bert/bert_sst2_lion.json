@@ -1,0 +1,42 @@
+[
+  {
+    "run": 1,
+    "optimizer": "LION",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.7012047150305339,
+    "training_time_seconds": 951.49826836586
+  },
+  {
+    "run": 2,
+    "optimizer": "LION",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.7439775786229542,
+    "training_time_seconds": 951.4135050773621
+  },
+  {
+    "run": 3,
+    "optimizer": "LION",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.7026671852384295,
+    "training_time_seconds": 951.4626517295837
+  },
+  {
+    "run": 4,
+    "optimizer": "LION",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.6990579898868289,
+    "training_time_seconds": 951.4079325199127
+  },
+  {
+    "run": 5,
+    "optimizer": "LION",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.716277443936893,
+    "training_time_seconds": 961.3494591712952
+  }
+]
