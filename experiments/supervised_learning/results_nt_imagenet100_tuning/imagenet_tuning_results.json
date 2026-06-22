@@ -1,0 +1,18 @@
+{
+  "MILO": {
+    "best_lr": 0.0001,
+    "best_accuracy": 0
+  },
+  "MILO_LW": {
+    "best_lr": 0.0001,
+    "best_accuracy": 0
+  },
+  "SGD": {
+    "best_lr": 0.01,
+    "best_accuracy": 0
+  },
+  "ADAMW": {
+    "best_lr": 0.0001,
+    "best_accuracy": 0
+  }
+}

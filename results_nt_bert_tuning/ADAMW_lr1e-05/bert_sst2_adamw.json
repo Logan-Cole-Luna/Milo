@@ -1,0 +1,10 @@
+[
+  {
+    "run": 1,
+    "optimizer": "ADAMW",
+    "task": "SST-2",
+    "best_val_accuracy": 91.85779816513761,
+    "best_val_loss": 0.26238113834655713,
+    "training_time_seconds": 963.4047892093658
+  }
+]

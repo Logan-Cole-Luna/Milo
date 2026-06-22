@@ -1,8 +1,8 @@
 {
   "model": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "model_architecture": {
     "features.0.weight": [
@@ -147,45 +147,45 @@
       100
     ],
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "batch_size": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "dataset": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "criterion": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "device": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "scheduler_params": {
     "scheduler": "None",
     "params": {},
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "validation_split_ratio": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "test_split_ratio": {
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "optimizer_params": {
     "MILO": {
@@ -216,20 +216,6 @@
       ],
       "eps": 5.711012214757632e-09
     },
-    "ADAM_MINI": {
-      "betas": [
-        0.9,
-        0.98
-      ],
-      "weight_decay": 2.411077618394229e-05
-    },
-    "NOVOGRAD": {
-      "betas": [
-        0.95,
-        0.99
-      ],
-      "weight_decay": 0.0006001563998494298
-    },
     "ADAGRAD": {
       "lr_decay": 0.001983980410627384,
       "weight_decay": 0.007464421046326345,
@@ -245,8 +231,17 @@
       "weight_decay": 0.0005332650646594368,
       "eps": 4.521120347212501e-09
     },
+    "SOAP": {
+      "betas": [
+        0.9,
+        0.95
+      ],
+      "weight_decay": 0.00035472823863775095,
+      "precondition_frequency": 20,
+      "eps": 1.487390956529005e-07
+    },
     "experiment_title": "VGG11_CIFAR100 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   }
 }

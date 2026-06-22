@@ -47,7 +47,16 @@ FINAL_SUITE = [
 EXPERIMENTS = [FINAL_SUITE]
 
 # --- Optimizers to Use ---
-OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW", "ADAGRAD", "ADEMAMIX", "SOAP"]
+OPTIMIZERS = [
+    # Core MILO variants
+    "MILO", "MILO_LW",
+    # Baseline optimizers
+    "SGD", "ADAMW", "ADAGRAD",
+    # Modern optimizers (2024-2026 landscape)
+    "LION", "ADAM_MINI", "RMSPROP_MOMENTUM", "SHAMPOO",
+    # Advanced optimizers
+    "SOAP", "MUON"
+]
 
 
 PERFORM_HYPERPARAMETER_TUNING = False
@@ -199,19 +208,14 @@ OPTIMIZER_PARAMS = {
         'use_cuda_kernels': True,  # Enable CUDA optimization
         'normalize_interval': 1
     },
-    "NOVOGRAD": {
-        "betas": (0.9, 0.99),
-        "weight_decay": 0.001,
-        "grad_averaging": True
-    },
     "ADAM_MINI": {
-        "betas": (0.9, 0.999), 
-        "eps": 1e-8, 
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
         "weight_decay": 0
         },
     "MUON": {
-        "betas": (0.9, 0.999), 
-        "eps": 1e-8, 
+        "betas": (0.9, 0.999),
+        "eps": 1e-8,
         "weight_decay": 0.01
         },
     "SOAP": {
@@ -224,13 +228,28 @@ OPTIMIZER_PARAMS = {
         "normalize_grads": False,
         "eps": 1e-8
     },
-    "ADEMAMIX": {
-        "betas": (0.9, 0.999, 0.9999),
-        "alpha": 8.0,
-        "weight_decay": 0.1,
+    # Modern optimizers (2024-2026)
+    "LION": {
+        "betas": (0.9, 0.99),
+        "weight_decay": 0.01
+    },
+    "ADAM_MINI": {
+        "betas": (0.9, 0.999),
         "eps": 1e-8,
-        "beta3_warmup": 0,
-        "alpha_warmup": 0
+        "weight_decay": 0.01
+    },
+    "RMSPROP_MOMENTUM": {
+        "alpha": 0.99,
+        "momentum": 0.9,
+        "eps": 1e-8,
+        "weight_decay": 0.01,
+        "centered": False
+    },
+    "SHAMPOO": {
+        "eps": 1e-10,
+        "momentum": 0.0,
+        "weight_decay": 0.01,
+        "update_freq": 1
     },
 }
 

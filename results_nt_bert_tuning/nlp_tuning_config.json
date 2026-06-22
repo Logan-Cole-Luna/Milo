@@ -1,0 +1,49 @@
+{
+  "model": "BERT-base-uncased",
+  "task": "SST-2 (Sentiment Classification)",
+  "batch_size": 32,
+  "epochs": 3,
+  "tuning_trials": 5,
+  "optimizers": {
+    "MILO": {
+      "learning_rates": [
+        1e-05,
+        5e-05,
+        0.0001,
+        0.0005,
+        0.001
+      ],
+      "best_lr": null
+    },
+    "MILO_LW": {
+      "learning_rates": [
+        1e-05,
+        5e-05,
+        0.0001,
+        0.0005,
+        0.001
+      ],
+      "best_lr": null
+    },
+    "SGD": {
+      "learning_rates": [
+        0.001,
+        0.005,
+        0.01,
+        0.05,
+        0.1
+      ],
+      "best_lr": null
+    },
+    "ADAMW": {
+      "learning_rates": [
+        1e-05,
+        5e-05,
+        0.0001,
+        0.0005,
+        0.001
+      ],
+      "best_lr": null
+    }
+  }
+}

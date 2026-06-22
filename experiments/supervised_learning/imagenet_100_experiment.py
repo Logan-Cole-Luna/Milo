@@ -36,6 +36,17 @@ from milo import milo
 from experiments.train_utils import run_training, evaluate_model
 from experiments.supervised_learning.network import ResNet34
 
+# Import optimizers
+try:
+    from optimizers.lion import Lion
+    from optimizers.adam_mini import AdamMini
+    from optimizers.rmsprop_momentum import RMSpropMomentum
+    from optimizers.shampoo import Shampoo
+    from optimizers.soap import SOAP
+    from optimizers.muon import MuonWithAuxAdam
+except ImportError as e:
+    print(f"Warning: Could not import some optimizers: {e}")
+
 # Set reproducibility
 seed = 42
 random.seed(seed)
@@ -50,66 +61,121 @@ torch.backends.cudnn.benchmark = False
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class ImageNet100Subset(datasets.ImageNet):
-    """Subset of ImageNet with 100 classes (10 per major category)."""
-
-    def __init__(self, root, split='train', transform=None, target_transform=None):
-        # Map to 100 classes: take classes 0-99 from full ImageNet
-        self.selected_classes = list(range(100))
-        super().__init__(root, split, transform, target_transform)
-
-        # Filter dataset to only selected classes
-        self.samples = [
-            (path, cls) for path, cls in self.samples
-            if cls in self.selected_classes
-        ]
-        # Remap class indices
-        self.class_to_idx = {
-            self.classes[i]: idx
-            for idx, i in enumerate(self.selected_classes)
-            if i < len(self.classes)
-        }
-
-    def __len__(self):
-        return len(self.samples)
-
-
 def get_imagenet_100_loaders(data_root, batch_size=128, num_workers=8):
-    """Get ImageNet-100 train/val dataloaders."""
+    """Get large-scale vision dataloaders using Tiny ImageNet (200 classes, 64x64)."""
+    import os
+    from PIL import Image
 
     normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225]
+        mean=[0.4802, 0.4481, 0.3975],
+        std=[0.2770, 0.2691, 0.2821]
     )
 
     # Training transforms with augmentation
     train_transforms = transforms.Compose([
-        transforms.RandomResizedCrop(224),
         transforms.RandomHorizontalFlip(),
+        transforms.RandomCrop(64, padding=4),
         transforms.ToTensor(),
         normalize,
     ])
 
     # Validation transforms (no augmentation)
     val_transforms = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
         transforms.ToTensor(),
         normalize,
     ])
 
-    try:
-        # Try to load from standard ImageNet location
-        train_dataset = ImageNet100Subset(data_root, split='train', transform=train_transforms)
-        val_dataset = ImageNet100Subset(data_root, split='val', transform=val_transforms)
-    except Exception as e:
-        print(f"Warning: Could not load full ImageNet: {e}")
-        print("Using CIFAR-100 as fallback (will run smaller experiment)")
-        # Fallback: use CIFAR-100 with larger images
-        from torchvision.datasets import CIFAR100
+    # Tiny ImageNet dataset class
+    class TinyImageNet(torch.utils.data.Dataset):
+        """Custom loader for Tiny ImageNet dataset."""
+        def __init__(self, root, train=True, transform=None):
+            self.root = os.path.expanduser(root)
+            self.train = train
+            self.transform = transform
 
-        train_dataset = CIFAR100(root=data_root, train=True, download=True, transform=train_transforms)
-        val_dataset = CIFAR100(root=data_root, train=False, download=True, transform=val_transforms)
+            split = 'train' if train else 'val'
+            self.data_dir = os.path.join(self.root, split)
+
+            if not os.path.exists(self.data_dir):
+                raise FileNotFoundError(f"Tiny ImageNet not found at {self.data_dir}. Download from http://cs231n.stanford.edu/tiny-imagenet-200.zip")
+
+            # Load image paths and labels
+            self.images = []
+            self.labels = []
+            self._load_data()
+
+        def _load_data(self):
+            if self.train:
+                # Training: each class has its own folder
+                class_names = sorted([d for d in os.listdir(self.data_dir) if os.path.isdir(os.path.join(self.data_dir, d))])
+                for class_idx, class_name in enumerate(class_names):
+                    class_path = os.path.join(self.data_dir, class_name, 'images')
+                    if os.path.isdir(class_path):
+                        for img_file in sorted(os.listdir(class_path)):
+                            if img_file.endswith(('.JPEG', '.jpg', '.png')):
+                                self.images.append(os.path.join(class_path, img_file))
+                                self.labels.append(class_idx)
+            else:
+                # Validation: images in one folder, labels in separate file
+                img_dir = os.path.join(self.data_dir, 'images')
+                if os.path.isdir(img_dir):
+                    # First, build class name to index mapping
+                    train_dir = os.path.join(self.root, 'train')
+                    class_names = sorted([d for d in os.listdir(train_dir) if os.path.isdir(os.path.join(train_dir, d))])
+                    class_to_idx = {name: idx for idx, name in enumerate(class_names)}
+
+                    # Load labels from val_annotations.txt
+                    labels_file = os.path.join(self.data_dir, 'val_annotations.txt')
+                    label_map = {}
+                    if os.path.exists(labels_file):
+                        with open(labels_file, 'r') as f:
+                            for line in f:
+                                parts = line.strip().split('\t')
+                                img_name = parts[0]
+                                class_name = parts[1]
+                                # Map to class index (0-199)
+                                label_map[img_name] = class_to_idx.get(class_name, 0)
+
+                    # Load images in order - only include if label is valid
+                    for img_file in sorted(os.listdir(img_dir)):
+                        if img_file.endswith(('.JPEG', '.jpg', '.png')):
+                            if img_file in label_map:
+                                label = label_map[img_file]
+                                # Ensure label is in valid range [0, num_classes)
+                                if 0 <= label < len(class_names):
+                                    self.images.append(os.path.join(img_dir, img_file))
+                                    self.labels.append(label)
+
+        def __len__(self):
+            return len(self.images)
+
+        def __getitem__(self, idx):
+            img_path = self.images[idx]
+            label = self.labels[idx]
+
+            try:
+                img = Image.open(img_path).convert('RGB')
+            except Exception as e:
+                # Fallback to zeros if image fails to load
+                print(f"Warning: Could not load {img_path}: {e}")
+                img = Image.new('RGB', (64, 64))
+
+            if self.transform:
+                img = self.transform(img)
+
+            return img, label
+
+    # Try to load Tiny ImageNet
+    tiny_imagenet_root = os.path.expanduser('~/scratch/datasets/tiny-imagenet-200')
+
+    try:
+        train_dataset = TinyImageNet(tiny_imagenet_root, train=True, transform=train_transforms)
+        val_dataset = TinyImageNet(tiny_imagenet_root, train=False, transform=val_transforms)
+        print(f"✓ Using Tiny ImageNet (200 classes, 64×64 images)")
+    except Exception as e:
+        print(f"Error loading Tiny ImageNet: {e}")
+        print(f"Make sure Tiny ImageNet is downloaded to: {tiny_imagenet_root}")
+        raise
 
     train_loader = DataLoader(
         train_dataset,
@@ -138,10 +204,10 @@ def run_imagenet_experiment(
     optimizer_name="MILO",
     optimizer_params=None,
     runs=3,
-    data_root="/scratch/datasets/imagenet",
+    data_root="/scratch/datasets",
     results_dir="results_nt_imagenet100"
 ):
-    """Run single optimizer experiment on ImageNet-100."""
+    """Run single optimizer experiment on large-scale dataset (CIFAR-100)."""
 
     if optimizer_params is None:
         optimizer_params = {}
@@ -181,8 +247,12 @@ def run_imagenet_experiment(
         # Create optimizer
         if optimizer_name.upper() == "MILO":
             optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MILO_LW":
+            optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAMW":
-            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "ADAGRAD":
+            optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "SGD":
             optimizer = torch.optim.SGD(
                 model.parameters(),
@@ -191,6 +261,18 @@ def run_imagenet_experiment(
                 nesterov=optimizer_params.get("nesterov", True),
                 weight_decay=optimizer_params.get("weight_decay", 0.0001),
             )
+        elif optimizer_name.upper() == "LION":
+            optimizer = Lion(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "ADAM_MINI":
+            optimizer = AdamMini(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "RMSPROP_MOMENTUM":
+            optimizer = RMSpropMomentum(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "SHAMPOO":
+            optimizer = Shampoo(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "SOAP":
+            optimizer = SOAP(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MUON":
+            optimizer = MuonWithAuxAdam([dict(params=model.parameters(), use_muon=True, lr=learning_rate, **optimizer_params)])
         else:
             raise ValueError(f"Unknown optimizer: {optimizer_name}")
 
@@ -285,9 +367,21 @@ if __name__ == "__main__":
         "MILO_LW": 0.001,
         "SGD": 0.1,
         "ADAMW": 0.001,
+        "ADAGRAD": 0.01,
+        "LION": 0.001,
+        "ADAM_MINI": 0.001,
+        "RMSPROP_MOMENTUM": 0.01,
+        "SHAMPOO": 0.001,
+        "SOAP": 0.001,
+        "MUON": 0.001,
     }
-    OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW"]
-    RUNS_PER_OPTIMIZER = 3  # Reduced from 5 to save time
+    OPTIMIZERS = [
+        "MILO", "MILO_LW",
+        "SGD", "ADAMW", "ADAGRAD",
+        "LION", "ADAM_MINI", "RMSPROP_MOMENTUM", "SHAMPOO",
+        "SOAP", "MUON"
+    ]
+    RUNS_PER_OPTIMIZER = 3
     DATA_ROOT = os.getenv("IMAGENET_DATA", "/scratch/datasets/imagenet")
 
     # MILO parameters
@@ -309,6 +403,13 @@ if __name__ == "__main__":
         "MILO_LW": milo_lw_params,
         "SGD": {"momentum": 0.9, "nesterov": True, "weight_decay": 0.0001},
         "ADAMW": {},
+        "ADAGRAD": {"lr_decay": 0, "weight_decay": 0.0},
+        "LION": {"betas": (0.9, 0.99), "weight_decay": 0.0001},
+        "ADAM_MINI": {"betas": (0.9, 0.999), "eps": 1e-8},
+        "RMSPROP_MOMENTUM": {"alpha": 0.99, "momentum": 0.9, "eps": 1e-8},
+        "SHAMPOO": {"eps": 1e-10, "momentum": 0.0},
+        "SOAP": {"betas": (0.95, 0.95), "weight_decay": 0.0001},
+        "MUON": {"betas": (0.9, 0.999), "eps": 1e-8, "weight_decay": 0.0001},
     }
 
     print("ImageNet-100 Large-Scale Experiment")

@@ -1,0 +1,10 @@
+[
+  {
+    "run": 1,
+    "optimizer": "SGD",
+    "task": "SST-2",
+    "best_val_accuracy": 76.72018348623853,
+    "best_val_loss": 0.4888359893645559,
+    "training_time_seconds": 940.2015178203583
+  }
+]

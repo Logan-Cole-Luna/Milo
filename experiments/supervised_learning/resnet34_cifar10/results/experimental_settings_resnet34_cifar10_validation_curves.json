@@ -1,8 +1,8 @@
 {
   "model": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "model_architecture": {
     "conv1.weight": [
@@ -445,45 +445,45 @@
       10
     ],
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "batch_size": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "dataset": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "criterion": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "device": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "scheduler_params": {
     "scheduler": "None",
     "params": {},
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "validation_split_ratio": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "test_split_ratio": {
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   },
   "optimizer_params": {
     "MILO": {
@@ -514,20 +514,6 @@
       ],
       "eps": 2.0243109032194693e-08
     },
-    "ADAM_MINI": {
-      "betas": [
-        0.9,
-        0.98
-      ],
-      "weight_decay": 0.0021262589452714455
-    },
-    "NOVOGRAD": {
-      "betas": [
-        0.95,
-        0.99
-      ],
-      "weight_decay": 0.0005868468460200001
-    },
     "ADAGRAD": {
       "lr_decay": 0.016291269862407597,
       "weight_decay": 0.0007609104783086574,
@@ -543,8 +529,17 @@
       "weight_decay": 0.001054749135232859,
       "eps": 1.6452876762197248e-10
     },
+    "SOAP": {
+      "betas": [
+        0.9,
+        0.95
+      ],
+      "weight_decay": 0.005956564469462972,
+      "precondition_frequency": 10,
+      "eps": 7.139340592306452e-07
+    },
     "experiment_title": "RESNET34_CIFAR10 Experiment ",
-    "epochs": 10,
-    "num_runs": 5
+    "epochs": 5,
+    "num_runs": 1
   }
 }

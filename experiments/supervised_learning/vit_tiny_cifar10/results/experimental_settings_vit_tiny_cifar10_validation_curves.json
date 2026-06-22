@@ -1,0 +1,618 @@
+{
+  "model": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "model_architecture": {
+    "cls_token": [
+      1,
+      1,
+      192
+    ],
+    "pos_embed": [
+      1,
+      65,
+      192
+    ],
+    "patch_embed.proj.weight": [
+      192,
+      3,
+      4,
+      4
+    ],
+    "patch_embed.proj.bias": [
+      192
+    ],
+    "blocks.0.norm1.weight": [
+      192
+    ],
+    "blocks.0.norm1.bias": [
+      192
+    ],
+    "blocks.0.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.0.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.0.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.0.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.0.norm2.weight": [
+      192
+    ],
+    "blocks.0.norm2.bias": [
+      192
+    ],
+    "blocks.0.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.0.mlp.0.bias": [
+      768
+    ],
+    "blocks.0.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.0.mlp.3.bias": [
+      192
+    ],
+    "blocks.1.norm1.weight": [
+      192
+    ],
+    "blocks.1.norm1.bias": [
+      192
+    ],
+    "blocks.1.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.1.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.1.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.1.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.1.norm2.weight": [
+      192
+    ],
+    "blocks.1.norm2.bias": [
+      192
+    ],
+    "blocks.1.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.1.mlp.0.bias": [
+      768
+    ],
+    "blocks.1.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.1.mlp.3.bias": [
+      192
+    ],
+    "blocks.2.norm1.weight": [
+      192
+    ],
+    "blocks.2.norm1.bias": [
+      192
+    ],
+    "blocks.2.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.2.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.2.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.2.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.2.norm2.weight": [
+      192
+    ],
+    "blocks.2.norm2.bias": [
+      192
+    ],
+    "blocks.2.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.2.mlp.0.bias": [
+      768
+    ],
+    "blocks.2.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.2.mlp.3.bias": [
+      192
+    ],
+    "blocks.3.norm1.weight": [
+      192
+    ],
+    "blocks.3.norm1.bias": [
+      192
+    ],
+    "blocks.3.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.3.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.3.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.3.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.3.norm2.weight": [
+      192
+    ],
+    "blocks.3.norm2.bias": [
+      192
+    ],
+    "blocks.3.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.3.mlp.0.bias": [
+      768
+    ],
+    "blocks.3.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.3.mlp.3.bias": [
+      192
+    ],
+    "blocks.4.norm1.weight": [
+      192
+    ],
+    "blocks.4.norm1.bias": [
+      192
+    ],
+    "blocks.4.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.4.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.4.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.4.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.4.norm2.weight": [
+      192
+    ],
+    "blocks.4.norm2.bias": [
+      192
+    ],
+    "blocks.4.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.4.mlp.0.bias": [
+      768
+    ],
+    "blocks.4.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.4.mlp.3.bias": [
+      192
+    ],
+    "blocks.5.norm1.weight": [
+      192
+    ],
+    "blocks.5.norm1.bias": [
+      192
+    ],
+    "blocks.5.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.5.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.5.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.5.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.5.norm2.weight": [
+      192
+    ],
+    "blocks.5.norm2.bias": [
+      192
+    ],
+    "blocks.5.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.5.mlp.0.bias": [
+      768
+    ],
+    "blocks.5.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.5.mlp.3.bias": [
+      192
+    ],
+    "blocks.6.norm1.weight": [
+      192
+    ],
+    "blocks.6.norm1.bias": [
+      192
+    ],
+    "blocks.6.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.6.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.6.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.6.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.6.norm2.weight": [
+      192
+    ],
+    "blocks.6.norm2.bias": [
+      192
+    ],
+    "blocks.6.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.6.mlp.0.bias": [
+      768
+    ],
+    "blocks.6.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.6.mlp.3.bias": [
+      192
+    ],
+    "blocks.7.norm1.weight": [
+      192
+    ],
+    "blocks.7.norm1.bias": [
+      192
+    ],
+    "blocks.7.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.7.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.7.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.7.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.7.norm2.weight": [
+      192
+    ],
+    "blocks.7.norm2.bias": [
+      192
+    ],
+    "blocks.7.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.7.mlp.0.bias": [
+      768
+    ],
+    "blocks.7.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.7.mlp.3.bias": [
+      192
+    ],
+    "blocks.8.norm1.weight": [
+      192
+    ],
+    "blocks.8.norm1.bias": [
+      192
+    ],
+    "blocks.8.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.8.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.8.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.8.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.8.norm2.weight": [
+      192
+    ],
+    "blocks.8.norm2.bias": [
+      192
+    ],
+    "blocks.8.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.8.mlp.0.bias": [
+      768
+    ],
+    "blocks.8.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.8.mlp.3.bias": [
+      192
+    ],
+    "blocks.9.norm1.weight": [
+      192
+    ],
+    "blocks.9.norm1.bias": [
+      192
+    ],
+    "blocks.9.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.9.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.9.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.9.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.9.norm2.weight": [
+      192
+    ],
+    "blocks.9.norm2.bias": [
+      192
+    ],
+    "blocks.9.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.9.mlp.0.bias": [
+      768
+    ],
+    "blocks.9.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.9.mlp.3.bias": [
+      192
+    ],
+    "blocks.10.norm1.weight": [
+      192
+    ],
+    "blocks.10.norm1.bias": [
+      192
+    ],
+    "blocks.10.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.10.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.10.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.10.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.10.norm2.weight": [
+      192
+    ],
+    "blocks.10.norm2.bias": [
+      192
+    ],
+    "blocks.10.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.10.mlp.0.bias": [
+      768
+    ],
+    "blocks.10.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.10.mlp.3.bias": [
+      192
+    ],
+    "blocks.11.norm1.weight": [
+      192
+    ],
+    "blocks.11.norm1.bias": [
+      192
+    ],
+    "blocks.11.attn.in_proj_weight": [
+      576,
+      192
+    ],
+    "blocks.11.attn.in_proj_bias": [
+      576
+    ],
+    "blocks.11.attn.out_proj.weight": [
+      192,
+      192
+    ],
+    "blocks.11.attn.out_proj.bias": [
+      192
+    ],
+    "blocks.11.norm2.weight": [
+      192
+    ],
+    "blocks.11.norm2.bias": [
+      192
+    ],
+    "blocks.11.mlp.0.weight": [
+      768,
+      192
+    ],
+    "blocks.11.mlp.0.bias": [
+      768
+    ],
+    "blocks.11.mlp.3.weight": [
+      192,
+      768
+    ],
+    "blocks.11.mlp.3.bias": [
+      192
+    ],
+    "norm.weight": [
+      192
+    ],
+    "norm.bias": [
+      192
+    ],
+    "head.weight": [
+      10,
+      192
+    ],
+    "head.bias": [
+      10
+    ],
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "batch_size": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "dataset": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "criterion": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "device": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "scheduler_params": {
+    "scheduler": "None",
+    "params": {},
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "validation_split_ratio": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "test_split_ratio": {
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  },
+  "optimizer_params": {
+    "MILO": {
+      "momentum": 0.8024670636839645,
+      "eps": 2.0917248525111224e-07,
+      "adaptive_eps": 1.9652099190006522e-09,
+      "weight_decay": 4.034958381547842e-05,
+      "clip_norm": 1.0
+    },
+    "MILO_LW": {
+      "momentum": 0.8842052583535994,
+      "scale_factor": 0.13665014887244506,
+      "eps": 6.699175062504193e-07,
+      "adaptive_eps": 4.891472146614792e-07,
+      "weight_decay": 0.007130178081509288,
+      "clip_norm": 2.0,
+      "scale_aware": true
+    },
+    "SGD": {
+      "momentum": 0.7550630626433654,
+      "weight_decay": 0.0017689785249744778
+    },
+    "ADAMW": {
+      "weight_decay": 0.0012732571692257127,
+      "betas": [
+        0.9,
+        0.98
+      ],
+      "eps": 3.6028135143203114e-09
+    },
+    "ADAGRAD": {
+      "lr_decay": 0.037848508729756536,
+      "weight_decay": 0.006465992879825197,
+      "eps": 9.850277988677289e-07
+    },
+    "ADEMAMIX": {
+      "betas": [
+        0.95,
+        0.999,
+        0.9999
+      ],
+      "alpha": 2.654831226718197,
+      "weight_decay": 0.033715454310973454,
+      "eps": 1.7179773190046688e-09
+    },
+    "SOAP": {
+      "betas": [
+        0.95,
+        0.98
+      ],
+      "weight_decay": 0.000506929604535717,
+      "precondition_frequency": 5,
+      "eps": 4.929936461057833e-07
+    },
+    "experiment_title": "VIT_TINY_CIFAR10 Experiment ",
+    "epochs": 5,
+    "num_runs": 1
+  }
+}

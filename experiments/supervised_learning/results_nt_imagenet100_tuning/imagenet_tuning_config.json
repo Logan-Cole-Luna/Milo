@@ -1,0 +1,49 @@
+{
+  "model": "ResNet50",
+  "dataset": "Tiny ImageNet-200 (or CIFAR-100 fallback)",
+  "batch_size": 128,
+  "epochs": 5,
+  "tuning_trials": 5,
+  "optimizers": {
+    "MILO": {
+      "learning_rates": [
+        0.0001,
+        0.0005,
+        0.001,
+        0.002,
+        0.005
+      ],
+      "best_lr": null
+    },
+    "MILO_LW": {
+      "learning_rates": [
+        0.0001,
+        0.0005,
+        0.001,
+        0.002,
+        0.005
+      ],
+      "best_lr": null
+    },
+    "SGD": {
+      "learning_rates": [
+        0.01,
+        0.05,
+        0.1,
+        0.2,
+        0.5
+      ],
+      "best_lr": null
+    },
+    "ADAMW": {
+      "learning_rates": [
+        0.0001,
+        0.0005,
+        0.001,
+        0.002,
+        0.005
+      ],
+      "best_lr": null
+    }
+  }
+}

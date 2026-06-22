@@ -1,0 +1,42 @@
+[
+  {
+    "run": 1,
+    "optimizer": "ADAGRAD",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.6931106299161911,
+    "training_time_seconds": 1064.3449125289917
+  },
+  {
+    "run": 2,
+    "optimizer": "ADAGRAD",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.6963742822408676,
+    "training_time_seconds": 1011.481198310852
+  },
+  {
+    "run": 3,
+    "optimizer": "ADAGRAD",
+    "task": "SST-2",
+    "best_val_accuracy": 50.91743119266055,
+    "best_val_loss": 0.700719096830913,
+    "training_time_seconds": 1082.9252240657806
+  },
+  {
+    "run": 4,
+    "optimizer": "ADAGRAD",
+    "task": "SST-2",
+    "best_val_accuracy": 70.9862385321101,
+    "best_val_loss": 0.5865151211619377,
+    "training_time_seconds": 1060.7503218650818
+  },
+  {
+    "run": 5,
+    "optimizer": "ADAGRAD",
+    "task": "SST-2",
+    "best_val_accuracy": 81.65137614678899,
+    "best_val_loss": 0.5034605312560286,
+    "training_time_seconds": 1072.204880952835
+  }
+]

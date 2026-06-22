@@ -53,6 +53,16 @@ except ImportError:
     print("Warning: Could not import milo, will use standard PyTorch optimizers")
     milo = None
 
+try:
+    from optimizers.lion import Lion
+    from optimizers.adam_mini import AdamMini
+    from optimizers.rmsprop_momentum import RMSpropMomentum
+    from optimizers.shampoo import Shampoo
+    from optimizers.soap import SOAP
+    from optimizers.muon import MuonWithAuxAdam
+except ImportError as e:
+    print(f"Warning: Could not import some optimizers: {e}")
+
 # Reproducibility
 seed = 42
 random.seed(seed)
@@ -98,8 +108,12 @@ def train_epoch(model, train_loader, optimizer, device, use_milo=False):
     total_samples = 0
 
     for batch in train_loader:
+        # Ensure batch is a dict (handle various HuggingFace dataset formats)
+        if not isinstance(batch, dict):
+            raise TypeError(f"Expected batch to be dict, got {type(batch)}: {batch}")
+
         # Move batch to device
-        batch = {k: v.to(device) for k, v in batch.items() if k != "idx"}
+        batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
 
         # Forward pass
         outputs = model(**batch)
@@ -135,7 +149,11 @@ def evaluate_model(model, eval_loader, device):
 
     with torch.no_grad():
         for batch in eval_loader:
-            batch = {k: v.to(device) for k, v in batch.items() if k != "idx"}
+            # Ensure batch is a dict
+            if not isinstance(batch, dict):
+                raise TypeError(f"Expected batch to be dict, got {type(batch)}")
+
+            batch = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
 
             outputs = model(**batch)
             loss = outputs.loss
@@ -195,12 +213,16 @@ def run_bert_experiment(
         )
         model.to(device)
 
-        # Create dataloaders
+        # Create dataloaders with proper collate function for HuggingFace datasets
+        from transformers import default_data_collator
+
         train_loader = DataLoader(
-            dataset["train"], batch_size=batch_size, shuffle=True
+            dataset["train"], batch_size=batch_size, shuffle=True,
+            collate_fn=default_data_collator
         )
         val_loader = DataLoader(
-            dataset["validation"], batch_size=batch_size, shuffle=False
+            dataset["validation"], batch_size=batch_size, shuffle=False,
+            collate_fn=default_data_collator
         )
 
         # Create optimizer
@@ -209,7 +231,9 @@ def run_bert_experiment(
         elif optimizer_name.upper() == "MILO_LW" and milo is not None:
             optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAMW":
-            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+            optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "ADAGRAD":
+            optimizer = torch.optim.Adagrad(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "SGD":
             optimizer = torch.optim.SGD(
                 model.parameters(),
@@ -217,6 +241,18 @@ def run_bert_experiment(
                 momentum=optimizer_params.get("momentum", 0.9),
                 weight_decay=optimizer_params.get("weight_decay", 0.0),
             )
+        elif optimizer_name.upper() == "LION":
+            optimizer = Lion(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "ADAM_MINI":
+            optimizer = AdamMini(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "RMSPROP_MOMENTUM":
+            optimizer = RMSpropMomentum(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "SHAMPOO":
+            optimizer = Shampoo(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "SOAP":
+            optimizer = SOAP(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MUON":
+            optimizer = MuonWithAuxAdam([dict(params=model.parameters(), use_muon=True, lr=learning_rate, **optimizer_params)])
         else:
             raise ValueError(f"Unknown optimizer: {optimizer_name}")
 
@@ -276,9 +312,21 @@ if __name__ == "__main__":
         "MILO": 1e-4,
         "MILO_LW": 1e-4,
         "SGD": 1e-3,
-        "ADAMW": 2e-5,  # Standard BERT LR
+        "ADAMW": 2e-5,
+        "ADAGRAD": 1e-3,
+        "LION": 1e-4,
+        "ADAM_MINI": 1e-4,
+        "RMSPROP_MOMENTUM": 1e-3,
+        "SHAMPOO": 1e-4,
+        "SOAP": 1e-4,
+        "MUON": 1e-4,
     }
-    OPTIMIZERS = ["MILO", "MILO_LW", "SGD", "ADAMW"]
+    OPTIMIZERS = [
+        "MILO", "MILO_LW",
+        "SGD", "ADAMW", "ADAGRAD",
+        "LION", "ADAM_MINI", "RMSPROP_MOMENTUM", "SHAMPOO",
+        "SOAP", "MUON"
+    ]
     RUNS_PER_OPTIMIZER = 5
 
     # MILO parameters
@@ -290,7 +338,7 @@ if __name__ == "__main__":
         "max_group_size": 5000,
         "momentum": 0.9,
         "adaptive": True,
-        "use_cuda_kernels": False,  # Transformers may not benefit from CUDA kernels
+        "use_cuda_kernels": False,
     }
 
     milo_lw_params = {**milo_params, "layer_wise": True}
@@ -300,6 +348,13 @@ if __name__ == "__main__":
         "MILO_LW": milo_lw_params,
         "SGD": {"momentum": 0.9, "weight_decay": 0.01},
         "ADAMW": {},
+        "ADAGRAD": {"lr_decay": 0, "weight_decay": 0.0},
+        "LION": {"betas": (0.9, 0.99), "weight_decay": 0.01},
+        "ADAM_MINI": {"betas": (0.9, 0.999), "eps": 1e-8},
+        "RMSPROP_MOMENTUM": {"alpha": 0.99, "momentum": 0.9, "eps": 1e-8},
+        "SHAMPOO": {"eps": 1e-10, "momentum": 0.0},
+        "SOAP": {"betas": (0.95, 0.95), "weight_decay": 0.01},
+        "MUON": {"betas": (0.9, 0.999), "eps": 1e-8, "weight_decay": 0.01},
     }
 
     print("BERT Fine-tuning Experiment on SST-2")

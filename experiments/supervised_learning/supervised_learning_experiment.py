@@ -34,12 +34,13 @@ from experiments.supervised_learning.network import (
 
 # Import optimizers and utilities
 from milo import milo
-from optimizers.novograd import NovoGrad
-#from adalayer import Adalayer
-# from adam_mini import Adam_mini
 from optimizers.muon import MuonWithAuxAdam
-from optimizers.ademamix_pytorch import AdEMAMix
 from optimizers.soap import SOAP
+# Modern optimizers (2024-2026 landscape)
+from optimizers.lion import Lion
+from optimizers.adam_mini import AdamMini
+from optimizers.rmsprop_momentum import RMSpropMomentum
+from optimizers.shampoo import Shampoo
 
 # Import configuration
 from experiments.supervised_learning.config import (
@@ -216,10 +217,6 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
             optimizer = torch.optim.Adagrad(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "ADAMW":
             optimizer = torch.optim.AdamW(model.parameters(), lr=base_lr, **optimizer_params)
-        elif optimizer_name == "NOVOGRAD":
-            optimizer = NovoGrad(model.parameters(), lr=base_lr, **optimizer_params)
-        #elif optimizer_name == "ADALAYER":
-        #    optimizer = Adalayer(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "ADAM_MINI":
             # Adam-mini expects named parameters; architecture-aware safe filtering.
             is_vit_like = any(hasattr(model, attr) for attr in ("cls_token", "pos_embed"))
@@ -245,7 +242,7 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
                             print(f"ADAM_MINI: Skipping {n} shape {tuple(p.shape)} (ndim={p.ndim})")
                             continue
                         yield n, p
-            optimizer = Adam_mini(named_parameters=_adam_mini_named_params(model), lr=base_lr, **optimizer_params)
+            optimizer = AdamMini(model.parameters(), lr=base_lr, **optimizer_params)
             # Avoid transformer-specific annotations for ViT to prevent internal head reshaping
             try:
                 if not is_vit_like:
@@ -297,10 +294,17 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
                     dict(params=other_params, use_muon=False, lr=base_lr, betas=optimizer_params.get('betas', (0.9, 0.999)), weight_decay=optimizer_params.get('weight_decay', 0)),
                 ]
             optimizer = MuonWithAuxAdam(param_groups)
-        elif optimizer_name == "ADEMAMIX":
-            optimizer = AdEMAMix(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "SOAP":
             optimizer = SOAP(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "LION":
+            optimizer = Lion(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "ADAM_MINI":
+            optimizer = AdamMini(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "RMSPROP_MOMENTUM":
+            optimizer = RMSpropMomentum(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "SHAMPOO":
+            # Shampoo requires special handling for large matrices
+            optimizer = Shampoo(model.parameters(), lr=base_lr, **optimizer_params)
         else:
             raise ValueError(f"Unsupported optimizer: {optimizer_name}")
 

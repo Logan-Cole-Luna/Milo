@@ -1,0 +1,10 @@
+[
+  {
+    "run": 1,
+    "optimizer": "MILO_LW",
+    "task": "SST-2",
+    "best_val_accuracy": 88.87614678899082,
+    "best_val_loss": 0.28710065888507025,
+    "training_time_seconds": 1034.6480844020844
+  }
+]

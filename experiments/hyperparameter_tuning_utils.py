@@ -17,10 +17,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from milo import milo
 from optimizers.novograd import NovoGrad
-# from adam_mini import Adam_mini
+from optimizers.adam_mini import AdamMini
 from optimizers.ademamix_pytorch import AdEMAMix
 from optimizers.muon import MuonWithAuxAdam
 from optimizers.soap import SOAP
+from optimizers.lion import Lion
+from optimizers.rmsprop_momentum import RMSpropMomentum
+from optimizers.shampoo import Shampoo
 from torch.utils.data import random_split, DataLoader
 
 # --- Add RL Evaluation Function ---
@@ -137,13 +140,19 @@ def objective(trial, model_fn, optimizer_name, param_grid,
     elif optimizer_name_upper == "NOVOGRAD":
         optimizer_class = NovoGrad
     elif optimizer_name_upper == "ADAM_MINI":
-        optimizer_class = Adam_mini
+        optimizer_class = AdamMini
     elif optimizer_name_upper == "ADEMAMIX":
         optimizer_class = AdEMAMix
-    #elif optimizer_name_upper == "MUON":
-    #    optimizer_class = MuonWithAuxAdam
+    elif optimizer_name_upper == "MUON":
+        optimizer_class = MuonWithAuxAdam
     elif optimizer_name_upper == "SOAP":
         optimizer_class = SOAP
+    elif optimizer_name_upper == "LION":
+        optimizer_class = Lion
+    elif optimizer_name_upper == "RMSPROP_MOMENTUM":
+        optimizer_class = RMSpropMomentum
+    elif optimizer_name_upper == "SHAMPOO":
+        optimizer_class = Shampoo
     else:
         # pytorch optimizers
         try:

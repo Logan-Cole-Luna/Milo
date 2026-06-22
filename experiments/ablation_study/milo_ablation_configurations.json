@@ -1,0 +1,102 @@
+{
+  "MILO_Full_CIFAR10": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_NoScale_CIFAR10": {
+    "status": "configured",
+    "params": {
+      "scale_aware": false,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_LayerWise_CIFAR10": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": true,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_NoMomentum_CIFAR10": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.0,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_SmallGroups_CIFAR10": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 1000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_Full_CIFAR100": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_NoScale_CIFAR100": {
+    "status": "configured",
+    "params": {
+      "scale_aware": false,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_LayerWise_CIFAR100": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": true,
+      "momentum": 0.9,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_NoMomentum_CIFAR100": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.0,
+      "max_group_size": 5000,
+      "scale_factor": 0.2
+    }
+  },
+  "MILO_SmallGroups_CIFAR100": {
+    "status": "configured",
+    "params": {
+      "scale_aware": true,
+      "layer_wise": false,
+      "momentum": 0.9,
+      "max_group_size": 1000,
+      "scale_factor": 0.2
+    }
+  }
+}
