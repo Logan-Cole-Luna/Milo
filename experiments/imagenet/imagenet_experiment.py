@@ -44,6 +44,7 @@ try:
     from optimizers.shampoo import Shampoo
     from optimizers.soap import SOAP
     from optimizers.muon import MuonWithAuxAdam
+    from optimizers.milo2 import MiloM, Mion
 except ImportError as e:
     print(f"Warning: Could not import some optimizers: {e}")
 
@@ -204,7 +205,7 @@ def run_imagenet_experiment(
     optimizer_name="MILO",
     optimizer_params=None,
     runs=3,
-    data_root="/scratch/datasets",
+    data_root="/home/logan03/scratch/datasets",
     results_dir="results_nt_imagenet100"
 ):
     """Run single optimizer experiment on large-scale dataset (CIFAR-100)."""
@@ -234,11 +235,11 @@ def run_imagenet_experiment(
 
         # Load data
         train_loader, val_loader = get_imagenet_100_loaders(data_root, batch_size)
-        num_classes = 100
+        num_classes = 200  # Tiny ImageNet-200 has 200 classes
 
         # Create model
-        if model_name == "ResNet50":
-            model = ResNet34(num_classes=num_classes)  # Use ResNet34 as proxy (can extend)
+        if model_name in ("ResNet50", "ResNet34"):
+            model = ResNet34(num_classes=num_classes)
         else:
             raise ValueError(f"Unknown model: {model_name}")
 
@@ -249,6 +250,10 @@ def run_imagenet_experiment(
             optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "MILO_LW":
             optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MILOM":
+            optimizer = MiloM(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MION":
+            optimizer = Mion(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAMW":
             optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAGRAD":
@@ -272,7 +277,16 @@ def run_imagenet_experiment(
         elif optimizer_name.upper() == "SOAP":
             optimizer = SOAP(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "MUON":
-            optimizer = MuonWithAuxAdam([dict(params=model.parameters(), use_muon=True, lr=learning_rate, **optimizer_params)])
+            # Muon's Newton-Schulz requires 2D params; route 1D params
+            # (biases, norms) to the auxiliary AdamW path.
+            wd = optimizer_params.get("weight_decay", 0)
+            hidden_weights = [p for p in model.parameters() if p.ndim >= 2]
+            other_params = [p for p in model.parameters() if p.ndim < 2]
+            param_groups = [
+                dict(params=hidden_weights, use_muon=True, lr=learning_rate, momentum=0.95, weight_decay=wd),
+                dict(params=other_params, use_muon=False, lr=learning_rate, betas=(0.9, 0.95), eps=1e-10, weight_decay=wd),
+            ]
+            optimizer = MuonWithAuxAdam(param_groups)
         else:
             raise ValueError(f"Unknown optimizer: {optimizer_name}")
 
@@ -281,6 +295,8 @@ def run_imagenet_experiment(
 
         # Training loop
         best_val_acc = 0
+        # Per-epoch curve for later visualization/analysis
+        epoch_curve = []
         for epoch in range(epochs):
             # Train
             model.train()
@@ -329,6 +345,14 @@ def run_imagenet_experiment(
             val_acc = 100 * val_correct / val_total
             print(f"Epoch {epoch+1}: Val Loss {val_loss/len(val_loader):.4f}, Val Acc {val_acc:.2f}%")
 
+            epoch_curve.append({
+                "epoch": epoch + 1,
+                "train_loss": train_loss / len(train_loader),
+                "train_accuracy": 100 * train_correct / train_total,
+                "val_loss": val_loss / len(val_loader),
+                "val_accuracy": val_acc,
+            })
+
             best_val_acc = max(best_val_acc, val_acc)
 
         run_time = time.time() - start_time
@@ -340,6 +364,7 @@ def run_imagenet_experiment(
             "model": model_name,
             "best_val_accuracy": best_val_acc,
             "training_time_seconds": run_time,
+            "epoch_curve": epoch_curve,
         }
         all_results.append(result)
 
@@ -376,11 +401,28 @@ if __name__ == "__main__":
 
     DATA_ROOT = os.getenv("IMAGENET_DATA", CONFIG_DATA_ROOT)
 
+    # Optional per-job optimizer filter (for parallel SLURM submission):
+    #   OPT_ONLY="SHAMPOO,SOAP,MUON" python imagenet_experiment.py
+    _only = os.getenv("OPT_ONLY")
+    if _only:
+        OPTIMIZERS = [o.strip() for o in _only.split(",") if o.strip()]
+    # Ablation: override MION hyperparameters, e.g. MION_PARAMS_JSON='{"ns_steps":3}'
+    _mion = os.getenv("MION_PARAMS_JSON")
+    if _mion:
+        import json as _json
+        OPTIMIZER_PARAMS["MION"].update(_json.loads(_mion))
+        print(f"MION params override -> {OPTIMIZER_PARAMS['MION']}")
+
     print(f"Tiny ImageNet-200 Large-Scale Experiment")
     print(f"Data location: {DATA_ROOT}")
     print(f"Optimizers: {OPTIMIZERS}")
     print(f"Runs per optimizer: {RUNS_PER_OPTIMIZER}")
     print(f"Epochs: {EPOCHS}")
+
+    # Sweep overrides (for LR sweep jobs)
+    _lr_override = os.getenv("LR_OVERRIDE")
+    _runs = int(os.getenv("SWEEP_RUNS", RUNS_PER_OPTIMIZER))
+    _results_dir = os.getenv("RESULTS_DIR_OVERRIDE", RESULTS_DIR)
 
     # Run experiments
     for optimizer_name in OPTIMIZERS:
@@ -388,12 +430,12 @@ if __name__ == "__main__":
             model_name="ResNet34",
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
-            learning_rate=LEARNING_RATES[optimizer_name],
+            learning_rate=float(_lr_override) if _lr_override else LEARNING_RATES[optimizer_name],
             optimizer_name=optimizer_name,
             optimizer_params=OPTIMIZER_PARAMS[optimizer_name],
-            runs=RUNS_PER_OPTIMIZER,
+            runs=_runs,
             data_root=DATA_ROOT,
-            results_dir=RESULTS_DIR,
+            results_dir=_results_dir,
         )
 
     print("\n" + "="*70)

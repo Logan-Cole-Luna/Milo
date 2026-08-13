@@ -189,28 +189,42 @@ class MuonWithAuxAdam(torch.optim.Optimizer):
             with torch.enable_grad():
                 loss = closure()
 
+        # Check if distributed training is initialized
+        is_distributed = dist.is_available() and dist.is_initialized()
+
         for group in self.param_groups:
             if group["use_muon"]:
-                params = group["params"]
-                params_pad = params + [torch.empty_like(params[-1])] * (dist.get_world_size() - len(params) % dist.get_world_size())
-                for base_i in range(len(params))[::dist.get_world_size()]:
-                    if base_i + dist.get_rank() < len(params):
-                        p = params[base_i + dist.get_rank()]
+                if is_distributed:
+                    # Distributed Muon
+                    params = group["params"]
+                    params_pad = params + [torch.empty_like(params[-1])] * (dist.get_world_size() - len(params) % dist.get_world_size())
+                    for base_i in range(len(params))[::dist.get_world_size()]:
+                        if base_i + dist.get_rank() < len(params):
+                            p = params[base_i + dist.get_rank()]
+                            if p.grad is None:
+                                p.grad = torch.zeros_like(p)
+                            state = self.state[p]
+                            if len(state) == 0:
+                                state["momentum_buffer"] = torch.zeros_like(p)
+                            update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
+                            p.mul_(1 - group["lr"] * group["weight_decay"])
+                            p.add_(update.reshape(p.shape), alpha=-group["lr"])
+                        dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
+                else:
+                    # Single-device Muon
+                    for p in group["params"]:
                         if p.grad is None:
-                            # continue
-                            p.grad = torch.zeros_like(p)  # Force synchronization
+                            p.grad = torch.zeros_like(p)
                         state = self.state[p]
                         if len(state) == 0:
                             state["momentum_buffer"] = torch.zeros_like(p)
                         update = muon_update(p.grad, state["momentum_buffer"], beta=group["momentum"])
                         p.mul_(1 - group["lr"] * group["weight_decay"])
                         p.add_(update.reshape(p.shape), alpha=-group["lr"])
-                    dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()], params_pad[base_i + dist.get_rank()])
             else:
                 for p in group["params"]:
                     if p.grad is None:
-                        # continue
-                        p.grad = torch.zeros_like(p)  # Force synchronization
+                        p.grad = torch.zeros_like(p)
                     state = self.state[p]
                     if len(state) == 0:
                         state["exp_avg"] = torch.zeros_like(p)

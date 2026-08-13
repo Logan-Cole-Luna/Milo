@@ -36,6 +36,7 @@ from experiments.supervised_learning.network import (
 from milo import milo
 from optimizers.muon import MuonWithAuxAdam
 from optimizers.soap import SOAP
+from optimizers.milo2 import MiloM, Mion
 # Modern optimizers (2024-2026 landscape)
 from optimizers.lion import Lion
 from optimizers.adam_mini import AdamMini
@@ -48,6 +49,7 @@ from experiments.vision.config import (
     BATCH_SIZE,
     EPOCHS,
     LR,
+    get_learning_rate,
     OPTIMIZERS,
     OPTIMIZER_PARAMS,
     SCHEDULER_PARAMS,
@@ -117,7 +119,7 @@ def get_dataloader(dataset_name, transform, batch_size, train=True):
     """Loads a dataset based on its name."""
     import os
     # Use pre-downloaded datasets from scratch directory (offline HPC)
-    root = os.path.expanduser('~/scratch/datasets')
+    root = "/home/logan03/scratch/datasets"
     os.makedirs(root, exist_ok=True)
 
     if dataset_name == "MNIST":
@@ -188,8 +190,9 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
         # Define loss function
         criterion = nn.CrossEntropyLoss()
         
-        # Base learning rate for the experiment
-        base_lr = LR[experiment_type]
+        # Per-optimizer, architecture-aware learning rate
+        base_lr = get_learning_rate(experiment_type, optimizer_name)
+        print(f"Using lr={base_lr} for {optimizer_name} on {experiment_type}")
         
         # Optimizer parameters (exclude 'lr' to avoid passing it twice)
         orig_optimizer_params = OPTIMIZER_PARAMS.get(optimizer_name, {})
@@ -202,6 +205,10 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
             optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "MILO_LW":
             optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name == "MILOM":
+            optimizer = MiloM(model.parameters(), lr=base_lr, **optimizer_params)
+        elif optimizer_name in ("MION", "MION_NOR"):
+            optimizer = Mion(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "MILO_TUNED":
             optimizer = milo(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "MILO_LW_TUNED":
@@ -293,8 +300,6 @@ def create_train_experiment_fn(experiment_type, train_loader_instance):
             optimizer = SOAP(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "LION":
             optimizer = Lion(model.parameters(), lr=base_lr, **optimizer_params)
-        elif optimizer_name == "ADAM_MINI":
-            optimizer = AdamMini(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "RMSPROP_MOMENTUM":
             optimizer = RMSpropMomentum(model.parameters(), lr=base_lr, **optimizer_params)
         elif optimizer_name == "SHAMPOO":
@@ -547,6 +552,27 @@ if __name__ == "__main__":
                         help=f"List of experiments to run. Choices: {list(EXPERIMENT_CONFIGS.keys())}")
     args = parser.parse_args()
     experiments = args.experiments
+
+    # Sweep overrides (reassign module globals read by run_supervised_experiments)
+    _only = os.getenv("OPT_ONLY")
+    if _only:
+        OPTIMIZERS = [o.strip() for o in _only.split(",") if o.strip()]
+    _runs = os.getenv("SWEEP_RUNS")
+    if _runs:
+        RUNS_PER_OPTIMIZER = int(_runs)
+    _ep = os.getenv("EPOCHS_OVERRIDE")
+    if _ep:
+        EPOCHS = int(_ep)
+    _rdir = os.getenv("RESULTS_DIR_OVERRIDE")
+    if _rdir:
+        RESULTS_DIR = _rdir
+    # LR_OVERRIDE is applied centrally inside config.get_learning_rate
+    # Ablation: override MION hyperparameters, e.g. MION_PARAMS_JSON='{"ns_steps":3}'
+    _mion = os.getenv("MION_PARAMS_JSON")
+    if _mion:
+        import json as _json
+        OPTIMIZER_PARAMS["MION"].update(_json.loads(_mion))
+        print(f"MION params override -> {OPTIMIZER_PARAMS['MION']}")
 
     # Run specified experiments or all by default
     run_supervised_experiments(experiments)

@@ -18,7 +18,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=/home/logan03/Milo/logs/imagenet_experiments_%A.out
 #SBATCH --error=/home/logan03/Milo/logs/imagenet_experiments_%A.err
-#SBATCH --mail-user=logan03luna@gmail.com
+#SBATCH --mail-user=lambethl@my.erau.edu
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail
@@ -52,7 +52,7 @@ echo ""
 cd "${PROJECT_ROOT}"
 
 # Check if Tiny ImageNet is available
-IMAGENET_PATH="${IMAGENET_DATA:-/scratch/datasets/tiny-imagenet-200}"
+IMAGENET_PATH="${IMAGENET_DATA:-${HOME}/scratch/datasets/tiny-imagenet-200}"
 if [ ! -d "$IMAGENET_PATH" ]; then
     echo "✗ Tiny ImageNet data not found at $IMAGENET_PATH"
     echo "  Please download from: http://cs231n.stanford.edu/tiny-imagenet-200.zip"

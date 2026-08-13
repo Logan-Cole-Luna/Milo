@@ -1,70 +1,59 @@
 #!/bin/bash
 # ============================================================
-# Download Tiny ImageNet for Large-Scale Experiments
+# Download Tiny ImageNet-200 to HPC Scratch
 #
-# MUST be run on login node with internet access
-# Usage:
-#   bash hpc/download_tiny_imagenet.sh
-#
-# Downloads ~230MB and extracts to ~/scratch/datasets/tiny-imagenet-200
+# Run on LOGIN NODE (has internet)
+# Usage: bash hpc/download_tiny_imagenet.sh
 # ============================================================
 
 set -euo pipefail
 
-PROJECT_ROOT="${1:-.}"
-cd "$PROJECT_ROOT"
+SCRATCH_DIR="/home/logan03/scratch/datasets"
+DATASET_DIR="$SCRATCH_DIR/tiny-imagenet-200"
 
-echo "=========================================="
-echo "Downloading Tiny ImageNet"
-echo "=========================================="
+echo "============================================================"
+echo "  Downloading Tiny ImageNet-200"
+echo "============================================================"
+echo ""
+echo "Destination: $DATASET_DIR"
 echo ""
 
-# Create dataset directory
-mkdir -p ~/scratch/datasets
+mkdir -p "$SCRATCH_DIR"
+cd "$SCRATCH_DIR"
 
-DATASET_DIR=~/scratch/datasets/tiny-imagenet-200
-
+# Check if already exists
 if [ -d "$DATASET_DIR" ]; then
-    echo "✓ Tiny ImageNet already downloaded at $DATASET_DIR"
-    echo ""
-    ls -lh "$DATASET_DIR" | head -5
+    echo "✓ Already downloaded at: $DATASET_DIR"
+    du -sh "$DATASET_DIR"
     exit 0
 fi
 
-echo "Downloading Tiny ImageNet (200 classes, ~230MB)..."
-echo "This may take 5-10 minutes..."
-echo ""
+ZIP_FILE="tiny-imagenet-200.zip"
 
-# Download
-cd ~/scratch/datasets
-
-if ! command -v wget &> /dev/null; then
-    echo "Using curl instead of wget..."
-    curl -L -O http://cs231n.stanford.edu/tiny-imagenet-200.zip
+echo "Downloading from Stanford (240 MB, ~5-10 min)..."
+if command -v wget &> /dev/null; then
+    wget -O "$ZIP_FILE" http://cs231n.stanford.edu/tiny-imagenet-200.zip 2>&1 | grep -E "saved|failed|ERROR" || echo "Downloading..."
 else
-    wget http://cs231n.stanford.edu/tiny-imagenet-200.zip
+    curl -L -o "$ZIP_FILE" http://cs231n.stanford.edu/tiny-imagenet-200.zip
 fi
 
-echo ""
-echo "✓ Download complete"
-echo ""
+if [ ! -f "$ZIP_FILE" ]; then
+    echo "ERROR: Download failed!"
+    exit 1
+fi
 
-echo "Extracting..."
-unzip -q tiny-imagenet-200.zip
-rm tiny-imagenet-200.zip
+echo "✓ Downloaded"
+echo ""
+echo "Extracting (may take 1-2 min)..."
+unzip -q "$ZIP_FILE"
+rm "$ZIP_FILE"
 
 echo ""
-echo "=========================================="
-echo "Tiny ImageNet Ready!"
-echo "=========================================="
-echo ""
-
-ls -lh "$DATASET_DIR"
-du -sh "$DATASET_DIR"
-
+echo "============================================================"
+echo "✓ Download Complete!"
+echo "============================================================"
 echo ""
 echo "Location: $DATASET_DIR"
-echo "Training samples: $(find $DATASET_DIR/train -type f -name '*.JPEG' | wc -l)"
-echo "Validation samples: $(find $DATASET_DIR/val -type f -name '*.JPEG' | wc -l)"
+echo "Size: $(du -sh "$DATASET_DIR" 2>/dev/null)"
 echo ""
-echo "Ready for offline HPC experiments!"
+echo "Ready for ImageNet baseline experiments!"

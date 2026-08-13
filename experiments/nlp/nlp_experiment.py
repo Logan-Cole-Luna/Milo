@@ -60,6 +60,7 @@ try:
     from optimizers.shampoo import Shampoo
     from optimizers.soap import SOAP
     from optimizers.muon import MuonWithAuxAdam
+    from optimizers.milo2 import MiloM, Mion
 except ImportError as e:
     print(f"Warning: Could not import some optimizers: {e}")
 
@@ -234,6 +235,10 @@ def run_bert_experiment(
             if milo is None:
                 raise ImportError("MILO optimizer not available")
             optimizer = milo(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MILOM":
+            optimizer = MiloM(model.parameters(), lr=learning_rate, **optimizer_params)
+        elif optimizer_name.upper() == "MION":
+            optimizer = Mion(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAMW":
             optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "ADAGRAD":
@@ -256,13 +261,24 @@ def run_bert_experiment(
         elif optimizer_name.upper() == "SOAP":
             optimizer = SOAP(model.parameters(), lr=learning_rate, **optimizer_params)
         elif optimizer_name.upper() == "MUON":
-            optimizer = MuonWithAuxAdam([dict(params=model.parameters(), use_muon=True, lr=learning_rate, **optimizer_params)])
+            # Muon's Newton-Schulz requires 2D params; route 1D params
+            # (biases, LayerNorm) to the auxiliary AdamW path.
+            wd = optimizer_params.get("weight_decay", 0)
+            hidden_weights = [p for p in model.parameters() if p.ndim >= 2]
+            other_params = [p for p in model.parameters() if p.ndim < 2]
+            param_groups = [
+                dict(params=hidden_weights, use_muon=True, lr=learning_rate, momentum=0.95, weight_decay=wd),
+                dict(params=other_params, use_muon=False, lr=learning_rate, betas=(0.9, 0.95), eps=1e-10, weight_decay=wd),
+            ]
+            optimizer = MuonWithAuxAdam(param_groups)
         else:
             raise ValueError(f"Unknown optimizer: {optimizer_name}")
 
         # Training loop
         best_val_acc = 0
         best_val_loss = float("inf")
+        # Per-epoch curve for later visualization/analysis
+        epoch_curve = []
 
         for epoch in range(epochs):
             train_loss, train_acc = train_epoch(
@@ -275,6 +291,14 @@ def run_bert_experiment(
                 f"Train Loss {train_loss:.4f}, Train Acc {train_acc:.2f}%, "
                 f"Val Loss {val_loss:.4f}, Val Acc {val_acc:.2f}%"
             )
+
+            epoch_curve.append({
+                "epoch": epoch + 1,
+                "train_loss": train_loss,
+                "train_accuracy": train_acc,
+                "val_loss": val_loss,
+                "val_accuracy": val_acc,
+            })
 
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
@@ -290,6 +314,7 @@ def run_bert_experiment(
             "best_val_accuracy": best_val_acc,
             "best_val_loss": best_val_loss,
             "training_time_seconds": run_time,
+            "epoch_curve": epoch_curve,
         }
         all_results.append(result)
 
@@ -322,11 +347,22 @@ if __name__ == "__main__":
         RESULTS_DIR,
     )
 
+    # Optional per-job optimizer filter (for parallel SLURM submission):
+    #   OPT_ONLY="SHAMPOO,SOAP,MUON" python nlp_experiment.py
+    _only = os.getenv("OPT_ONLY")
+    if _only:
+        OPTIMIZERS = [o.strip() for o in _only.split(",") if o.strip()]
+
     print("BERT Fine-tuning Experiment on SST-2")
     print(f"Optimizers: {OPTIMIZERS}")
     print(f"Runs per optimizer: {RUNS_PER_OPTIMIZER}")
     print(f"Epochs: {EPOCHS}")
     print(f"Batch size: {BATCH_SIZE}")
+
+    # Sweep overrides (for LR sweep jobs)
+    _lr_override = os.getenv("LR_OVERRIDE")
+    _runs = int(os.getenv("SWEEP_RUNS", RUNS_PER_OPTIMIZER))
+    _results_dir = os.getenv("RESULTS_DIR_OVERRIDE", RESULTS_DIR)
 
     # Run experiments
     for optimizer_name in OPTIMIZERS:
@@ -336,9 +372,9 @@ if __name__ == "__main__":
                 optimizer_params=OPTIMIZER_PARAMS[optimizer_name],
                 batch_size=BATCH_SIZE,
                 epochs=EPOCHS,
-                learning_rate=LEARNING_RATES[optimizer_name],
-                runs=RUNS_PER_OPTIMIZER,
-                results_dir=RESULTS_DIR,
+                learning_rate=float(_lr_override) if _lr_override else LEARNING_RATES[optimizer_name],
+                runs=_runs,
+                results_dir=_results_dir,
             )
         except Exception as e:
             print(f"\nError running {optimizer_name}: {e}")

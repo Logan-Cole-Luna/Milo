@@ -13,26 +13,32 @@ RUNS_PER_OPTIMIZER = 3
 RESULTS_DIR = "results_nt_imagenet200"
 RESULTS_DIR_TUNED = "results_nt_imagenet200_tuned"
 
-# --- Learning Rates per Optimizer ---
+# --- Learning Rates per Optimizer (Optuna-tuned) ---
 LEARNING_RATES = {
-    "MILO": 0.001,
-    "MILO_LW": 0.001,
-    "SGD": 0.1,
-    "ADAMW": 0.001,
-    "ADAGRAD": 0.01,
-    "LION": 0.001,
-    "ADAM_MINI": 0.001,
-    "RMSPROP_MOMENTUM": 0.01,
-    "SHAMPOO": 0.001,
-    "SOAP": 0.001,
-    "MUON": 0.001,
+    "MILO": 0.0208,
+    "MILO_LW": 0.00392,
+    "MILOM": 0.00338,
+    "MION": 0.00101,
+    "SGD": 0.0126,
+    "ADAMW": 0.000104,
+    "ADAGRAD": 0.00104,
+    "LION": 3.11e-05,
+    "ADAM_MINI": 0.000131,
+    "RMSPROP_MOMENTUM": 0.000131,
+    "SHAMPOO": 0.0252,
+    "SOAP": 0.00171,
+    "MUON": 0.00368,
 }
 
 # --- Optimizers to Evaluate ---
 OPTIMIZERS = [
-    "MILO", "MILO_LW",
+    # Original + Improved MILO variants
+    "MILO", "MILO_LW", "MILOM", "MION",
+    # Baselines
     "SGD", "ADAMW", "ADAGRAD",
+    # Modern optimizers (2024-2026)
     "LION", "ADAM_MINI", "RMSPROP_MOMENTUM", "SHAMPOO",
+    # Advanced optimizers
     "SOAP", "MUON"
 ]
 
@@ -57,6 +63,24 @@ OPTIMIZER_PARAMS = {
         "momentum": 0.9,
         "adaptive": True,
         "use_cuda_kernels": True,
+    },
+    "MILOM": {
+        "momentum": 0.95,
+        "nesterov": True,
+        "weight_decay": 0.01,
+        "eps": 1e-8,
+        "scale_factor": 0.2,
+        "rms_target": 0.2,
+        "group_size": None
+    },
+    "MION": {
+        "momentum": 0.95,
+        "nesterov": True,
+        "weight_decay": 0.01,
+        "eps": 1e-8,
+        "scale_factor": 0.0,
+        "rms_target": 0.2,
+        "ns_steps": 5
     },
     "SGD": {
         "momentum": 0.9,
@@ -91,8 +115,6 @@ OPTIMIZER_PARAMS = {
         "weight_decay": 0.0001
     },
     "MUON": {
-        "betas": (0.9, 0.999),
-        "eps": 1e-8,
         "weight_decay": 0.0001
     },
 }
@@ -118,6 +140,24 @@ OPTIMIZER_PARAMS_TUNED = {
         "momentum": 0.95,
         "adaptive": True,
         "use_cuda_kernels": True,
+    },
+    "MILOM": {
+        "momentum": 0.95,
+        "nesterov": True,
+        "weight_decay": 0.005,
+        "eps": 1e-8,
+        "scale_factor": 0.2,
+        "rms_target": 0.2,
+        "group_size": None
+    },
+    "MION": {
+        "momentum": 0.95,
+        "nesterov": True,
+        "weight_decay": 0.005,
+        "eps": 1e-8,
+        "scale_factor": 0.0,
+        "rms_target": 0.2,
+        "ns_steps": 5
     },
     "SGD": {
         "momentum": 0.95,
@@ -152,8 +192,6 @@ OPTIMIZER_PARAMS_TUNED = {
         "weight_decay": 0.00005
     },
     "MUON": {
-        "betas": (0.95, 0.999),
-        "eps": 1e-8,
         "weight_decay": 0.00005
     },
 }

@@ -1,0 +1,20 @@
+\begin{tabular}{lrrrr}
+\toprule
+Optimizer & Val loss & Tokens$\to$3.3 & tok/s & State (MB) \\
+\midrule
+MUON & 3.238 & 852M & 91483 & 649 \\
+SOAP & 3.254 & 852M & 87208 & 989 \\
+\textbf{MION} & 3.281 & 1049M & 91800 & 494 \\
+ADAM\_MINI & 3.304 & 1114M & 97934 & 989 \\
+ADAMW & 3.306 & 1180M & 96841 & 989 \\
+LION & 3.373 & -- & 96285 & 494 \\
+\textbf{MION\_NOR} & 3.390 & -- & 76382 & 495 \\
+\textbf{MILOM} & 3.494 & -- & 96828 & 494 \\
+\textbf{MION\_ADAM} & 3.548 & -- & 95496 & 649 \\
+MION\_V2 & 3.692 & -- & 70972 & 649 \\
+\textbf{MILO\_LW} & 3.996 & -- & 97221 & 989 \\
+SGD & 4.118 & -- & 96907 & 494 \\
+\textbf{MILO} & 4.571 & -- & 97631 & 989 \\
+SHAMPOO & 5.911 & -- & 95779 & 1246 \\
+\bottomrule
+\end{tabular}

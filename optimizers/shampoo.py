@@ -77,18 +77,27 @@ class Shampoo(Optimizer):
                 # Reshape gradient for computation
                 grad_flat = grad.view(-1, grad.size(-1)) if grad.dim() > 1 else grad.unsqueeze(0)
 
-                # Update H matrix (Hessian approximation)
+                # Update H matrix (Hessian approximation).
+                # Sum_i g_i g_i^T over all rows == G^T G; the vectorized matmul
+                # is mathematically identical to the per-row loop but avoids
+                # millions of tiny GPU ops per step (the loop made Shampoo hang
+                # on large conv/linear layers).
+                # Recompute the (expensive) inverse only when H is updated, and
+                # cache it between updates. With update_freq=1 this is identical
+                # to inverting every step; with update_freq>1 it amortizes the
+                # O(d^3) inverse (standard Shampoo "preconditioner frequency"),
+                # which is essential for large matrices (e.g. BERT FFN 3072^2).
                 if state['step'] % group['update_freq'] == 0:
-                    for i in range(grad_flat.size(0)):
-                        g = grad_flat[i].unsqueeze(-1)  # Column vector
-                        H.add_(g @ g.t(), alpha=1.0)
-
-                # Compute update with regularization
-                try:
-                    H_inv = torch.linalg.inv(H + eps * torch.eye(H.size(0), device=H.device, dtype=H.dtype))
-                except:
-                    # Fallback to pseudoinverse if singular
-                    H_inv = torch.linalg.pinv(H)
+                    H.add_(grad_flat.t() @ grad_flat)
+                if 'H_inv' not in state or state['step'] % group['update_freq'] == 0:
+                    # linalg.inv needs fp32+ (bf16 unsupported); compute in float,
+                    # cast back to the parameter dtype.
+                    Hf = (H + eps * torch.eye(H.size(0), device=H.device, dtype=H.dtype)).float()
+                    try:
+                        state['H_inv'] = torch.linalg.inv(Hf).to(H.dtype)
+                    except Exception:
+                        state['H_inv'] = torch.linalg.pinv(Hf).to(H.dtype)
+                H_inv = state['H_inv']
 
                 # Apply update
                 if grad.dim() == 1:

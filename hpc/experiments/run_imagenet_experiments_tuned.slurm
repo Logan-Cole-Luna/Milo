@@ -18,7 +18,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=/home/logan03/Milo/logs/imagenet_tuned_%A.out
 #SBATCH --error=/home/logan03/Milo/logs/imagenet_tuned_%A.err
-#SBATCH --mail-user=logan03luna@gmail.com
+#SBATCH --mail-user=lambethl@my.erau.edu
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail

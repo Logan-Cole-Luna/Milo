@@ -22,7 +22,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=/home/logan03/Milo/logs/hyperparameter_tuning_%A.out
 #SBATCH --error=/home/logan03/Milo/logs/hyperparameterf_tuning_%A.err
-#SBATCH --mail-user=logan03luna@gmail.com
+#SBATCH --mail-user=lambethl@my.erau.edu
 #SBATCH --mail-type=END,FAIL
 
 set -euo pipefail
@@ -56,41 +56,8 @@ echo ""
 
 cd "${PROJECT_ROOT}"
 
-python << 'PYTHON_SCRIPT'
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-
-# Enable hyperparameter tuning
-import experiments.supervised_learning.config as config
-config.PERFORM_HYPERPARAMETER_TUNING = True
-
-# Run tuning on a subset of experiments to save time
-from experiments.supervised_learning.supervised_learning_experiment import run_supervised_experiments
-
-tuning_suite = [
-    "RESNET34_CIFAR10",
-    "RESNET34_CIFAR100",
-    "VGG11_CIFAR10",
-    "VGG11_CIFAR100",
-    "VIT_TINY_CIFAR10",
-    "VIT_TINY_CIFAR100",
-]
-
-print("Running hyperparameter tuning on vision models...")
-print(f"Experiments: {tuning_suite}")
-print(f"Tuning trials: {config.TRIALS}")
-print()
-
-run_supervised_experiments(tuning_suite)
-
-print("\n" + "="*70)
-print("Hyperparameter tuning complete!")
-print("="*70)
-print("Results saved to: experiments/supervised_learning/*/results/")
-print("Use these optimal hyperparameters for final training runs")
-
-PYTHON_SCRIPT
+python experiments/vision/vision_experiment.py \
+    --experiments RESNET34_CIFAR10 RESNET34_CIFAR100 VGG11_CIFAR10 VGG11_CIFAR100 VIT_TINY_CIFAR10 VIT_TINY_CIFAR100
 
 if [ $? -eq 0 ]; then
     echo ""
